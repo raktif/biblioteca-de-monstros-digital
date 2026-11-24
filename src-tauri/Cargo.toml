@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Biblioteca local de fichas de monstros para AD&D 2e e Shadowlords 3E"
 authors = ["Biblioteca de Monstros Digital"]
 edition = "2024"
-rust-version = "1.90"
+rust-version = "1.94"
 
 [lib]
 name = "biblioteca_de_monstros_digital_lib"
@@ -14,9 +14,18 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "=2.7.6", features = [] }
 
 [dependencies]
+base64 = "=0.22.1"
+image = { version = "=0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
+jsonschema = { version = "=0.63.1", default-features = false }
 log = "=0.4.29"
+sha2 = "=0.11.0"
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.145"
+sqlx = { version = "=0.9.1", default-features = false, features = ["macros", "migrate", "runtime-tokio", "sqlite"] }
 tauri = { version = "=2.12.7", features = [] }
 tauri-plugin-log = "=2.10.2"
 tauri-plugin-single-instance = "=2.4.4"
+time = { version = "=0.3.47", features = ["formatting", "parsing"] }
+tokio = { version = "=1.49.0", features = ["macros", "rt", "sync", "time"] }
+unicode-normalization = "=0.1.25"
+uuid = { version = "=1.29.3", features = ["v4"] }
