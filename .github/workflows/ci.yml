@@ -29,8 +29,12 @@ jobs:
           components: rustfmt, clippy
       - name: Instalar dependências
         run: corepack pnpm install --frozen-lockfile
+      - name: Conferir tipos gerados pelos schemas
+        run: corepack pnpm schemas:check
       - name: Verificar TypeScript
         run: corepack pnpm check
+      - name: Executar testes unitários
+        run: corepack pnpm test
       - name: Verificar lint
         run: corepack pnpm lint
       - name: Compilar frontend

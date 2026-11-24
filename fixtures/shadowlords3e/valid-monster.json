@@ -1,0 +1,85 @@
+{
+  "id": "5dc96658-53b4-49ae-8c87-e8ad409de52b",
+  "libraryId": "2eb3f2af-bf15-4bec-92ca-8e1285220eb1",
+  "systemCode": "shadowlords3e",
+  "schemaKey": "shadowlords3e.monster",
+  "schemaVersion": 1,
+  "name": "Vigia de Junco",
+  "descriptors": ["Humanoide anfíbio", "patrulheiro de brejo"],
+  "dragonModuleEnabled": false,
+  "status": "active",
+  "image": null,
+  "narratives": {
+    "description": "Criatura fictícia usada como fixture de contrato.",
+    "combat": "Prefere atacar com uma lança curta.",
+    "habitatSociety": "Protege os caminhos de seu território.",
+    "ecology": "Caça em áreas alagadas.",
+    "tactics": null,
+    "variations": null,
+    "additionalNotes": null
+  },
+  "profiles": [
+    {
+      "id": "4930b572-acb8-4552-bb85-a88d4e26d0a1",
+      "label": "Vigia comum",
+      "kind": "primary",
+      "isPrimary": true,
+      "sortOrder": 0,
+      "climates": [{ "code": "temperate", "other": null }],
+      "terrains": [{ "code": "swamp", "other": null }],
+      "climateTerrainNotes": null,
+      "frequency": { "code": "uncommon", "other": null },
+      "organization": "Pequenas patrulhas",
+      "activityPeriods": [{ "code": "night", "other": null }],
+      "activityNotes": null,
+      "diet": "Onívora",
+      "quantityEncounter": "2-6",
+      "size": "Médio",
+      "morale": "Regular",
+      "treasure": "Individual: pequeno",
+      "specialDefensesSummary": "Nenhuma",
+      "magicProtectionSummary": "Nenhuma",
+      "profileNotes": null,
+      "statistics": {
+        "type": "shadowlords3e",
+        "attributes": { "for": 1, "agi": 1, "sau": 0, "int": 0, "sab": 0, "per": 1 },
+        "hitPoints": 12,
+        "defense": {
+          "natural": 10,
+          "armorBonus": 1,
+          "shieldBonus": 0,
+          "magicBonus": 0,
+          "otherBonus": 0,
+          "otherDescription": null,
+          "final": 11
+        },
+        "damageReductions": [],
+        "attacks": [
+          {
+            "id": "ef1c5893-ffdd-47ca-8d87-caf6d37bf10f",
+            "name": "Lança curta",
+            "attackFormula": "2d6+1",
+            "attackNotes": null,
+            "damageFormula": "1d6+1",
+            "damageTypes": ["piercing"],
+            "range": "Corpo a corpo",
+            "maxUsesPerRound": 1,
+            "notes": null,
+            "sortOrder": 0
+          }
+        ],
+        "activeDefense": { "enabled": false, "formula": null, "cost": null, "restrictions": null, "notes": null },
+        "skills": [],
+        "movement": "Normal para humanoide médio",
+        "traits": [],
+        "spells": [],
+        "specialsSummary": "Nenhuma",
+        "dragon": null
+      }
+    }
+  ],
+  "sources": [],
+  "contentHash": "1111111111111111111111111111111111111111111111111111111111111111",
+  "createdAt": "2026-11-23T10:00:00.000Z",
+  "updatedAt": "2026-11-23T10:00:00.000Z"
+}

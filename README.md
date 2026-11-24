@@ -4,7 +4,9 @@ Aplicativo desktop local, em português do Brasil, para organizar fichas de mons
 
 ## Estado do projeto
 
-Etapa 0 — fundação do projeto. A especificação normativa está em [`docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md`](docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md). Decisões aprovadas e esclarecimentos estão em [`docs/decisions/ETAPA_0_DECISOES.md`](docs/decisions/ETAPA_0_DECISOES.md) e nos ADRs.
+Etapa 1 — contratos iniciais de domínio. A especificação normativa está em [`docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md`](docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md). Decisões aprovadas e esclarecimentos estão em [`docs/decisions/ETAPA_0_DECISOES.md`](docs/decisions/ETAPA_0_DECISOES.md) e nos ADRs.
+
+Esta etapa entrega os contratos JSON Schema v1 para AD&D e Shadowlords, tipos TypeScript gerados, fixtures fictícias e validações de domínio testadas. Interface, banco de dados e CRUD de bibliotecas permanecem nas etapas seguintes.
 
 ## Requisitos de desenvolvimento
 
@@ -42,6 +44,8 @@ pnpm tauri dev # janela desktop Tauri
 pnpm check
 pnpm lint
 pnpm build
+pnpm schemas:check
+pnpm test
 cd src-tauri
 cargo fmt --check
 cargo clippy -- -D warnings
@@ -50,13 +54,17 @@ cargo check
 
 Os comandos Tauri locais exigem o toolchain nativo listado acima. Sem ele, use os instaladores de teste publicados como artefatos do CI.
 
+Para regenerar os tipos após alterar um schema, execute `pnpm schemas:generate`; `pnpm schemas:check` confirma que os tipos versionados estão atualizados.
+
 ## Arquitetura inicial
 
 - `src/`: shell React, estilos e porta de inicialização;
 - `src-tauri/`: contêiner desktop e comandos nativos;
 - `docs/adr/`: decisões arquiteturais;
 - `docs/specification/`: cópia versionada da especificação aprovada;
-- `schemas/`: contratos do domínio serão introduzidos na Etapa 1;
+- `schemas/`: contratos JSON Schema Draft 2020-12 para fichas AD&D e Shadowlords;
+- `src/generated/`: tipos TypeScript derivados dos schemas;
+- `fixtures/`: exemplos fictícios e reduzidos para testes;
 - `src-tauri/migrations/`: migrações SQLite serão introduzidas na Etapa 2.
 
 O frontend não acessa diretamente o banco, o sistema de arquivos ou APIs nativas. Não há fontes, scripts ou serviços remotos.

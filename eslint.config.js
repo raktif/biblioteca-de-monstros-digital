@@ -6,8 +6,12 @@ export default [
   { ignores: ['dist', 'src-tauri/target', 'node_modules'] },
   js.configs.recommended,
   {
-    files: ['**/*.{js,mjs,cjs}'],
+    files: ['src/**/*.{js,mjs,cjs}'],
     languageOptions: { globals: globals.browser },
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
+  },
+  {
+    files: ['scripts/**/*.{js,mjs,cjs}'],
+    languageOptions: { globals: globals.node },
   },
 ];
