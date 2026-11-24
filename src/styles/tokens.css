@@ -1,0 +1,103 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --color-ink: #17394a;
+  --color-text: #263b46;
+  --color-muted: #6f8290;
+  --color-surface: #ffffff;
+  --color-surface-alt: #eaf1f4;
+  --color-border: #b8cbd4;
+  --color-focus: #0b6e99;
+  --color-danger: #b42318;
+  --color-warning: #9a6700;
+  --color-success: #247a47;
+  --color-background: #f4f7f8;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-small: 4px;
+  --radius-medium: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.startup {
+  display: grid;
+  min-height: 100vh;
+  padding: var(--space-6);
+  place-items: center;
+}
+
+.startup-card {
+  width: min(100%, 680px);
+  padding: clamp(24px, 5vw, 56px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  box-shadow: 0 16px 44px rgb(23 57 74 / 8%);
+}
+
+.eyebrow {
+  color: var(--color-focus);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  max-width: 15ch;
+  margin: var(--space-3) 0 var(--space-4);
+  color: var(--color-ink);
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  line-height: 1.05;
+}
+
+.startup-copy {
+  max-width: 54ch;
+  color: var(--color-muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.status {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  margin-top: var(--space-4);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-small);
+  color: var(--color-success);
+  background: var(--color-surface-alt);
+  font-weight: 600;
+}

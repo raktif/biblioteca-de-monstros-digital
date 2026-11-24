@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Biblioteca de Monstros Digital",
+  "version": "0.1.0",
+  "identifier": "br.com.bibliotecademonstros.digital",
+  "build": {
+    "beforeDevCommand": "corepack pnpm dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "corepack pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Biblioteca de Monstros Digital",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ipc: http://ipc.localhost; font-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'self';"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

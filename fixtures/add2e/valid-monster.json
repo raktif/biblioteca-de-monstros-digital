@@ -1,0 +1,62 @@
+{
+  "id": "b0a1174e-92ad-4dc8-8ecb-b0ec097f743e",
+  "libraryId": "3aecc5b5-4b4a-4d32-a737-36cb2815fcc3",
+  "systemCode": "add2e",
+  "schemaKey": "add2e.monster",
+  "schemaVersion": 1,
+  "name": "Guardião do Brejo",
+  "editorialCategory": null,
+  "status": "active",
+  "image": null,
+  "narratives": {
+    "description": "Criatura fictícia usada como fixture de contrato.",
+    "combat": "Ataca com uma lança curta.",
+    "habitatSociety": "Vive em pequenos grupos nos brejos.",
+    "ecology": "Alimenta-se de peixes e pequenos animais.",
+    "variations": null,
+    "additionalNotes": null
+  },
+  "profiles": [
+    {
+      "id": "0dcbeb52-e1ff-4dc8-a283-f0568b2e675f",
+      "label": "Padrão",
+      "kind": "primary",
+      "isPrimary": true,
+      "sortOrder": 0,
+      "climates": [{ "code": "temperate", "other": null }],
+      "terrains": [{ "code": "swamp", "other": null }],
+      "climateTerrainNotes": null,
+      "frequency": { "code": "uncommon", "other": null },
+      "organization": "Pequenos grupos",
+      "activityPeriods": [{ "code": "night", "other": null }],
+      "activityNotes": null,
+      "diet": "Onívora",
+      "treasure": "Individual: pequeno",
+      "quantityEncounter": "2-6",
+      "size": "Médio",
+      "morale": "Regular",
+      "profileNotes": null,
+      "statistics": {
+        "type": "add2e",
+        "intelligence": "Baixa (5-7)",
+        "alignment": "Neutra",
+        "armorClass": "7",
+        "movement": "9",
+        "hitDice": "2+1",
+        "thac0": "19",
+        "attacksPerRound": "1",
+        "damagePerAttack": "1-6",
+        "specialAttacks": "Nenhum",
+        "specialDefenses": "Nenhuma",
+        "magicResistance": "Nenhuma",
+        "experienceValue": "35",
+        "psionics": null
+      }
+    }
+  ],
+  "auxiliaryTables": [],
+  "sources": [],
+  "contentHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "createdAt": "2026-11-23T10:00:00.000Z",
+  "updatedAt": "2026-11-23T10:00:00.000Z"
+}
