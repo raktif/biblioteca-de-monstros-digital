@@ -2,3 +2,19 @@
 .graphify/manifest.json
 .graphify/scope.json
 .graphifyignore
+
+# JavaScript
+node_modules/
+.pnpm-store/
+dist/
+.vite/
+.eslintcache
+
+# Rust and Tauri
+/src-tauri/target/
+/src-tauri/gen/
+
+# Local secrets and environment
+.env
+.env.*
+!.env.example
