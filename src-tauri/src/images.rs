@@ -26,7 +26,7 @@ pub struct NormalizedLibraryImage {
     pub height: u32,
 }
 
-pub struct StagedLibraryImageChange {
+pub struct StagedImageChange {
     staging_dir: PathBuf,
     backup_dir: PathBuf,
     final_dir: PathBuf,
@@ -137,10 +137,26 @@ impl NormalizedLibraryImage {
     }
 }
 
-impl StagedLibraryImageChange {
+impl StagedImageChange {
     pub fn stage(
         app_data_dir: &Path,
         library_id: &str,
+        image: Option<&NormalizedLibraryImage>,
+    ) -> AppResult<Self> {
+        Self::stage_at(
+            app_data_dir,
+            &format!("images/libraries/{library_id}"),
+            "cover.webp",
+            "thumb.webp",
+            image,
+        )
+    }
+
+    pub fn stage_at(
+        app_data_dir: &Path,
+        relative_directory: &str,
+        main_name: &str,
+        thumbnail_name: &str,
         image: Option<&NormalizedLibraryImage>,
     ) -> AppResult<Self> {
         let operation_id = uuid::Uuid::new_v4().to_string();
@@ -148,7 +164,7 @@ impl StagedLibraryImageChange {
         let backup_dir = app_data_dir
             .join("staging/images")
             .join(format!("{operation_id}-backup"));
-        let final_dir = app_data_dir.join("images/libraries").join(library_id);
+        let final_dir = app_data_dir.join(relative_directory);
         fs::create_dir_all(&staging_dir)?;
 
         let mut staged = Self {
@@ -161,15 +177,13 @@ impl StagedLibraryImageChange {
             completed: false,
         };
         if let Some(image) = image {
-            if let Err(error) =
-                write_synced(&staged.staging_dir.join("cover.webp"), &image.main_bytes).and_then(
-                    |()| {
-                        write_synced(
-                            &staged.staging_dir.join("thumb.webp"),
-                            &image.thumbnail_bytes,
-                        )
-                    },
-                )
+            if let Err(error) = write_synced(&staged.staging_dir.join(main_name), &image.main_bytes)
+                .and_then(|()| {
+                    write_synced(
+                        &staged.staging_dir.join(thumbnail_name),
+                        &image.thumbnail_bytes,
+                    )
+                })
             {
                 staged.rollback();
                 return Err(error.into());
@@ -268,7 +282,7 @@ impl StagedLibraryImageChange {
     }
 }
 
-impl Drop for StagedLibraryImageChange {
+impl Drop for StagedImageChange {
     fn drop(&mut self) {
         if !self.completed {
             self.rollback();

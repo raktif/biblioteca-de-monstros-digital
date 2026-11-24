@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::{
     database::{AppState, utc_now},
     error::{AppError, AppResult},
-    images::{NormalizedLibraryImage, StagedLibraryImageChange},
+    images::{NormalizedLibraryImage, StagedImageChange},
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -113,7 +113,7 @@ pub async fn library_create(
         .transpose()?;
     let mut file_change = image
         .as_ref()
-        .map(|image| StagedLibraryImageChange::stage(state.app_data_dir(), &id, Some(image)))
+        .map(|image| StagedImageChange::stage(state.app_data_dir(), &id, Some(image)))
         .transpose()?;
     let image_path = image.as_ref().map(|_| library_image_path(&id));
 
@@ -212,7 +212,7 @@ pub async fn library_update(
         .transpose()?;
     let should_change_image = image.is_some() || (remove_image && current.2.is_some());
     let mut file_change = if should_change_image {
-        Some(StagedLibraryImageChange::stage(
+        Some(StagedImageChange::stage(
             state.app_data_dir(),
             &id,
             image.as_ref(),
@@ -422,9 +422,27 @@ pub async fn run_startup_maintenance(pool: &SqlitePool, app_data_dir: &Path) -> 
     .bind(format_time(now)?)
     .fetch_all(pool)
     .await?;
-    if !expired.is_empty() {
+    let expired_monsters = sqlx::query_scalar::<_, String>(
+        "SELECT id FROM monsters WHERE status = 'trashed' AND purge_after <= ?",
+    )
+    .bind(format_time(now)?)
+    .fetch_all(pool)
+    .await?;
+    if !expired.is_empty() || !expired_monsters.is_empty() {
         let mut transaction = pool.begin().await?;
         for id in &expired {
+            let monster_ids =
+                sqlx::query_scalar::<_, String>("SELECT id FROM monsters WHERE library_id = ?")
+                    .bind(id)
+                    .fetch_all(&mut *transaction)
+                    .await?;
+            for monster_id in monster_ids {
+                sqlx::query("INSERT OR IGNORE INTO file_cleanup_tasks (relative_path, created_at) VALUES (?, ?)")
+                    .bind(format!("images/monsters/{monster_id}"))
+                    .bind(format_time(now)?)
+                    .execute(&mut *transaction)
+                    .await?;
+            }
             sqlx::query("INSERT OR IGNORE INTO file_cleanup_tasks (relative_path, created_at) VALUES (?, ?)")
                 .bind(library_directory_path(id))
                 .bind(format_time(now)?)
@@ -435,6 +453,20 @@ pub async fn run_startup_maintenance(pool: &SqlitePool, app_data_dir: &Path) -> 
                 .bind(format_time(now)?)
                 .execute(&mut *transaction)
                 .await?;
+        }
+        for monster_id in expired_monsters {
+            sqlx::query("INSERT OR IGNORE INTO file_cleanup_tasks (relative_path, created_at) VALUES (?, ?)")
+                .bind(format!("images/monsters/{monster_id}"))
+                .bind(format_time(now)?)
+                .execute(&mut *transaction)
+                .await?;
+            sqlx::query(
+                "DELETE FROM monsters WHERE id = ? AND status = 'trashed' AND purge_after <= ?",
+            )
+            .bind(monster_id)
+            .bind(format_time(now)?)
+            .execute(&mut *transaction)
+            .await?;
         }
         transaction.commit().await?;
     }

@@ -4,9 +4,9 @@ Aplicativo desktop local, em português do Brasil, para organizar fichas de mons
 
 ## Estado do projeto
 
-Etapa 2 — persistência local e gestão de bibliotecas. A especificação normativa está em [`docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md`](docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md). Decisões aprovadas e esclarecimentos estão em [`docs/decisions/ETAPA_0_DECISOES.md`](docs/decisions/ETAPA_0_DECISOES.md) e nos ADRs.
+Etapa 3 — cadastro e consulta de monstros AD&D 2ª Edição, sobre a persistência local e a gestão de bibliotecas da Etapa 2. A especificação normativa está em [`docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md`](docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md). Decisões aprovadas e esclarecimentos estão em [`docs/decisions/ETAPA_0_DECISOES.md`](docs/decisions/ETAPA_0_DECISOES.md) e nos ADRs.
 
-O aplicativo oferece criação, edição, consulta, remoção para lixeira, restauração e exclusão definitiva de bibliotecas. O núcleo Tauri mantém os dados em SQLite local com migrações, e processa capas JPEG, PNG ou WebP. A tela de detalhes prepara o espaço para o cadastro de monstros, previsto para a Etapa 3. A Etapa 1 permanece disponível nos schemas, tipos gerados e validações de domínio.
+O aplicativo oferece criação, edição, consulta, remoção para lixeira, restauração e exclusão definitiva de bibliotecas e monstros. As fichas AD&D incluem perfis estatísticos, poderes psiônicos, tabelas complementares, referências e narrativas em Markdown limitado; valores mecânicos são preservados como texto. O núcleo Tauri valida e persiste os documentos e perfis no SQLite local, além de processar imagens JPEG, PNG ou WebP. A lista apresenta fichas ativas, arquivadas ou na lixeira. A Etapa 1 permanece disponível nos schemas, tipos gerados e validações de domínio.
 
 ## Requisitos de desenvolvimento
 

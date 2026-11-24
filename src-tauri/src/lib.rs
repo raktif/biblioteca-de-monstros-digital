@@ -2,6 +2,8 @@ mod database;
 mod error;
 mod images;
 mod libraries;
+mod monster_validation;
+mod monsters;
 
 use std::path::PathBuf;
 
@@ -78,6 +80,14 @@ pub fn run() {
             libraries::library_restore,
             libraries::library_delete_permanently,
             libraries::library_trash_list,
+            monsters::monster_list,
+            monsters::monster_get,
+            monsters::monster_create,
+            monsters::monster_update,
+            monsters::monster_set_archived,
+            monsters::monster_move_to_trash,
+            monsters::monster_restore,
+            monsters::monster_delete_permanently,
         ])
         .run(tauri::generate_context!())
         .expect("falha ao iniciar Biblioteca de Monstros Digital");

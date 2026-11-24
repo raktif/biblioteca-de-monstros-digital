@@ -52,8 +52,8 @@ CREATE TABLE monsters (
     image_path TEXT,
     thumbnail_path TEXT,
     image_hash TEXT CHECK (image_hash IS NULL OR (length(image_hash) = 64 AND image_hash NOT GLOB '*[^0-9a-f]*')),
-    image_width INTEGER,
-    image_height INTEGER,
+    image_width INTEGER CHECK (image_width IS NULL OR image_width BETWEEN 1 AND 2048),
+    image_height INTEGER CHECK (image_height IS NULL OR image_height BETWEEN 1 AND 2048),
     content_hash TEXT NOT NULL CHECK (length(content_hash) = 64),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -63,12 +63,54 @@ CREATE TABLE monsters (
     row_version INTEGER NOT NULL DEFAULT 1 CHECK (row_version >= 1),
     CHECK ((status = 'trashed' AND previous_status IS NOT NULL AND deleted_at IS NOT NULL AND purge_after IS NOT NULL)
         OR (status <> 'trashed' AND previous_status IS NULL AND deleted_at IS NULL AND purge_after IS NULL)),
+    CHECK ((image_path IS NULL AND thumbnail_path IS NULL AND image_hash IS NULL AND image_width IS NULL AND image_height IS NULL)
+        OR (image_path IS NOT NULL AND thumbnail_path IS NOT NULL AND image_hash IS NOT NULL AND image_width IS NOT NULL AND image_height IS NOT NULL)),
     CHECK ((status = 'archived' AND archived_at IS NOT NULL) OR (status <> 'archived' AND archived_at IS NULL))
 );
 
 CREATE INDEX idx_monsters_library_status_name ON monsters(library_id, status, sort_name);
 CREATE INDEX idx_monsters_library_updated ON monsters(library_id, updated_at);
 CREATE INDEX idx_monsters_purge_after ON monsters(purge_after);
+
+CREATE TRIGGER trg_monster_document_matches_library_insert
+BEFORE INSERT ON monsters
+WHEN NOT EXISTS (
+    SELECT 1 FROM libraries l
+    WHERE l.id = NEW.library_id
+      AND l.system_code = json_extract(NEW.document_json, '$.systemCode')
+      AND l.system_code = 'add2e'
+      AND NEW.schema_key = 'add2e.monster'
+      AND NEW.schema_version = 1
+      AND NEW.id = json_extract(NEW.document_json, '$.id')
+      AND NEW.library_id = json_extract(NEW.document_json, '$.libraryId')
+      AND NEW.schema_key = json_extract(NEW.document_json, '$.schemaKey')
+      AND NEW.schema_version = json_extract(NEW.document_json, '$.schemaVersion')
+      AND NEW.row_version = json_extract(NEW.document_json, '$.rowVersion')
+      AND NEW.status = json_extract(NEW.document_json, '$.status')
+)
+BEGIN
+    SELECT RAISE(ABORT, 'MONSTER_SYSTEM_MISMATCH');
+END;
+
+CREATE TRIGGER trg_monster_document_matches_library_update
+BEFORE UPDATE OF library_id, schema_key, schema_version, status, document_json ON monsters
+WHEN NOT EXISTS (
+    SELECT 1 FROM libraries l
+    WHERE l.id = NEW.library_id
+      AND l.system_code = json_extract(NEW.document_json, '$.systemCode')
+      AND l.system_code = 'add2e'
+      AND NEW.schema_key = 'add2e.monster'
+      AND NEW.schema_version = 1
+      AND NEW.id = json_extract(NEW.document_json, '$.id')
+      AND NEW.library_id = json_extract(NEW.document_json, '$.libraryId')
+      AND NEW.schema_key = json_extract(NEW.document_json, '$.schemaKey')
+      AND NEW.schema_version = json_extract(NEW.document_json, '$.schemaVersion')
+      AND NEW.row_version = json_extract(NEW.document_json, '$.rowVersion')
+      AND NEW.status = json_extract(NEW.document_json, '$.status')
+)
+BEGIN
+    SELECT RAISE(ABORT, 'MONSTER_SYSTEM_MISMATCH');
+END;
 
 CREATE TRIGGER trg_library_system_immutable_after_monster
 BEFORE UPDATE OF system_code ON libraries

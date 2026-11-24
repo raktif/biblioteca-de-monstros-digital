@@ -9,12 +9,12 @@
   "status": "active",
   "image": null,
   "narratives": {
-    "description": "Criatura fictícia usada como fixture de contrato.",
-    "combat": "Ataca com uma lança curta.",
+    "description": "Criatura fictícia usada como fixture de contrato.\n\n### Aparência\n\nTem escamas **verde-escuras** e olhos atentos.",
+    "combat": "Ataca com uma lança curta.\n\n- Prefere emboscadas.\n- Recuará se estiver em desvantagem.",
     "habitatSociety": "Vive em pequenos grupos nos brejos.",
     "ecology": "Alimenta-se de peixes e pequenos animais.",
-    "variations": null,
-    "additionalNotes": null
+    "variations": "Algumas comunidades usam escudos de madeira.",
+    "additionalNotes": "Exemplo fictício para validar o armazenamento integral."
   },
   "profiles": [
     {
@@ -50,12 +50,77 @@
         "specialDefenses": "Nenhuma",
         "magicResistance": "Nenhuma",
         "experienceValue": "35",
+        "psionics": {
+          "level": "Médio",
+          "disciplinesSciencesDevotions": "Psicometabolismo: 1 ciência, 2 devoções",
+          "attackDefenseModes": "Ataque: 1; Defesa: 1",
+          "powerScore": "12",
+          "psps": "36",
+          "powers": "**Autocura** restaura vigor após o combate.\n\n- Resistência\n- Sentido ampliado"
+        }
+      }
+    },
+    {
+      "id": "84d80aa0-b96e-4440-ad5c-54c6cfcc97c1",
+      "label": "Guardião veterano",
+      "kind": "leader",
+      "isPrimary": false,
+      "sortOrder": 1,
+      "climates": [{ "code": "temperate", "other": null }],
+      "terrains": [{ "code": "swamp", "other": null }],
+      "climateTerrainNotes": "Próximo a ruínas alagadas",
+      "frequency": { "code": "rare", "other": null },
+      "organization": "Um líder com 2-4 guardiões",
+      "activityPeriods": [{ "code": "night", "other": null }],
+      "activityNotes": null,
+      "diet": "Onívora",
+      "treasure": "Individual: padrão",
+      "quantityEncounter": "1 + 2-4",
+      "size": "Médio",
+      "morale": "Elite (13)",
+      "profileNotes": "O líder conhece as passagens alagadas.",
+      "statistics": {
+        "type": "add2e",
+        "intelligence": "Média (8-10)",
+        "alignment": "Neutra",
+        "armorClass": "5",
+        "movement": "9, natação 6",
+        "hitDice": "4+2",
+        "thac0": "17",
+        "attacksPerRound": "2",
+        "damagePerAttack": "1-8/1-6",
+        "specialAttacks": "Comando tático",
+        "specialDefenses": "Nenhuma",
+        "magicResistance": "Nenhuma",
+        "experienceValue": "120",
         "psionics": null
       }
     }
   ],
-  "auxiliaryTables": [],
-  "sources": [],
+  "auxiliaryTables": [
+    {
+      "id": "962bf053-14bf-43fe-834f-d01f671f57fb",
+      "title": "Equipamento encontrado",
+      "columns": [
+        { "header": "Resultado", "alignment": "left" },
+        { "header": "Objeto", "alignment": "center" },
+        { "header": "Quantidade", "alignment": "right" }
+      ],
+      "rows": [["1-3", "Poção", "1"], ["4-6", "Escudo", "1"]],
+      "notes": "Tabela fictícia para validar colunas e linhas estruturadas.",
+      "sortOrder": 0
+    }
+  ],
+  "sources": [
+    {
+      "id": "514ad9be-87d5-48b2-9749-221b408e7734",
+      "title": "Bestiário de Teste",
+      "entry": "Guardião do Brejo",
+      "page": "42",
+      "notes": "Referência fictícia.",
+      "sortOrder": 0
+    }
+  ],
   "contentHash": "0000000000000000000000000000000000000000000000000000000000000000",
   "createdAt": "2026-11-23T10:00:00.000Z",
   "updatedAt": "2026-11-23T10:00:00.000Z"

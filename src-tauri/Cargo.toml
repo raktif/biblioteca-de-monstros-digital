@@ -16,6 +16,7 @@ tauri-build = { version = "=2.7.6", features = [] }
 [dependencies]
 base64 = "=0.22.1"
 image = { version = "=0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
+jsonschema = { version = "=0.63.1", default-features = false }
 log = "=0.4.29"
 sha2 = "=0.11.0"
 serde = { version = "=1.0.228", features = ["derive"] }
