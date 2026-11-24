@@ -45,6 +45,9 @@ jobs:
       - name: Verificar Rust
         working-directory: src-tauri
         run: cargo clippy -- -D warnings
+      - name: Testar persistência, migração e imagens
+        working-directory: src-tauri
+        run: cargo test
       - name: Compilar núcleo Tauri
         working-directory: src-tauri
         run: cargo check

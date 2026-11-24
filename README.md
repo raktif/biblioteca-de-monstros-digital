@@ -4,9 +4,9 @@ Aplicativo desktop local, em português do Brasil, para organizar fichas de mons
 
 ## Estado do projeto
 
-Etapa 1 — contratos iniciais de domínio. A especificação normativa está em [`docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md`](docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md). Decisões aprovadas e esclarecimentos estão em [`docs/decisions/ETAPA_0_DECISOES.md`](docs/decisions/ETAPA_0_DECISOES.md) e nos ADRs.
+Etapa 2 — persistência local e gestão de bibliotecas. A especificação normativa está em [`docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md`](docs/specification/Especificacao_Tecnica_Biblioteca_de_Monstros_Digital_MVP_v1.md). Decisões aprovadas e esclarecimentos estão em [`docs/decisions/ETAPA_0_DECISOES.md`](docs/decisions/ETAPA_0_DECISOES.md) e nos ADRs.
 
-Esta etapa entrega os contratos JSON Schema v1 para AD&D e Shadowlords, tipos TypeScript gerados, fixtures fictícias e validações de domínio testadas. Interface, banco de dados e CRUD de bibliotecas permanecem nas etapas seguintes.
+O aplicativo oferece criação, edição, consulta, remoção para lixeira, restauração e exclusão definitiva de bibliotecas. O núcleo Tauri mantém os dados em SQLite local com migrações, e processa capas JPEG, PNG ou WebP. A tela de detalhes prepara o espaço para o cadastro de monstros, previsto para a Etapa 3. A Etapa 1 permanece disponível nos schemas, tipos gerados e validações de domínio.
 
 ## Requisitos de desenvolvimento
 
@@ -50,9 +50,10 @@ cd src-tauri
 cargo fmt --check
 cargo clippy -- -D warnings
 cargo check
+cargo test
 ```
 
-Os comandos Tauri locais exigem o toolchain nativo listado acima. Sem ele, use os instaladores de teste publicados como artefatos do CI.
+Os comandos Tauri locais exigem o toolchain nativo listado acima. Esta máquina não possui `link.exe`, então a compilação e os testes Rust são executados no CI do Windows. Sem os Build Tools, use os instaladores de teste publicados como artefatos do CI.
 
 Para regenerar os tipos após alterar um schema, execute `pnpm schemas:generate`; `pnpm schemas:check` confirma que os tipos versionados estão atualizados.
 
@@ -65,6 +66,6 @@ Para regenerar os tipos após alterar um schema, execute `pnpm schemas:generate`
 - `schemas/`: contratos JSON Schema Draft 2020-12 para fichas AD&D e Shadowlords;
 - `src/generated/`: tipos TypeScript derivados dos schemas;
 - `fixtures/`: exemplos fictícios e reduzidos para testes;
-- `src-tauri/migrations/`: migrações SQLite serão introduzidas na Etapa 2.
+- `src-tauri/migrations/`: migrações versionadas do banco SQLite.
 
-O frontend não acessa diretamente o banco, o sistema de arquivos ou APIs nativas. Não há fontes, scripts ou serviços remotos.
+O frontend não acessa diretamente o banco ou caminhos do sistema de arquivos; ele usa comandos Tauri. `pnpm dev` oferece um adaptador de demonstração no navegador com armazenamento local do navegador. Não há fontes, scripts ou serviços remotos.
