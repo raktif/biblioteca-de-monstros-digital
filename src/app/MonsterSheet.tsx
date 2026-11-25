@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { Profile } from '../generated/add2e-monster';
+import type { Add2EMonster, Profile } from '../generated/add2e-monster';
 import type { MonsterRecord } from '../infrastructure/monsters';
 import { LimitedMarkdown } from './LimitedMarkdown';
 
 type Props = {
-  record: MonsterRecord;
+  record: Omit<MonsterRecord, 'document'> & { document: Add2EMonster };
   onClose: () => void;
   onEdit: () => void;
   onArchive: (archived: boolean) => void;

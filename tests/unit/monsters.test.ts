@@ -13,22 +13,23 @@ describe('fichas AD&D no adaptador de navegador', () => {
     const source = structuredClone(fixture) as Add2EMonster;
     const created = await createMonster(library.id, source, null);
 
-    expect(created.document.libraryId).toBe(library.id);
-    expect(created.document.id).not.toBe(source.id);
-    expect(created.document.profiles).toEqual(source.profiles);
-    expect(created.document.auxiliaryTables).toEqual(source.auxiliaryTables);
-    expect(created.document.sources).toEqual(source.sources);
-    expect(created.document.profiles[0].statistics.psionics).toEqual(source.profiles[0].statistics.psionics);
-    expect((await getMonster(created.document.id)).document).toEqual(created.document);
+    const createdDocument = created.document as Add2EMonster;
+    expect(createdDocument.libraryId).toBe(library.id);
+    expect(createdDocument.id).not.toBe(source.id);
+    expect(createdDocument.profiles).toEqual(source.profiles);
+    expect(createdDocument.auxiliaryTables).toEqual(source.auxiliaryTables);
+    expect(createdDocument.sources).toEqual(source.sources);
+    expect(createdDocument.profiles[0].statistics.psionics).toEqual(source.profiles[0].statistics.psionics);
+    expect((await getMonster(createdDocument.id)).document).toEqual(createdDocument);
 
-    const archived = await setMonsterArchived(created.document.id, true, created.document.rowVersion ?? 1);
+    const archived = await setMonsterArchived(createdDocument.id, true, createdDocument.rowVersion ?? 1);
     expect(archived.document.status).toBe('archived');
-    await moveMonsterToTrash(created.document.id, archived.document.rowVersion ?? 2);
+    await moveMonsterToTrash(createdDocument.id, archived.document.rowVersion ?? 2);
     expect(await listMonsters(library.id, 'trashed')).toHaveLength(1);
-    await restoreMonster(created.document.id);
-    expect((await getMonster(created.document.id)).document.status).toBe('archived');
-    await moveMonsterToTrash(created.document.id, (await getMonster(created.document.id)).document.rowVersion ?? 3);
-    await deleteMonsterPermanently(created.document.id, created.document.name);
+    await restoreMonster(createdDocument.id);
+    expect((await getMonster(createdDocument.id)).document.status).toBe('archived');
+    await moveMonsterToTrash(createdDocument.id, (await getMonster(createdDocument.id)).document.rowVersion ?? 3);
+    await deleteMonsterPermanently(createdDocument.id, createdDocument.name);
     expect(await listMonsters(library.id, 'all')).toHaveLength(0);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import add2eFixture from '../../fixtures/add2e/valid-monster.json';
 import shadowlordsFixture from '../../fixtures/shadowlords3e/valid-monster.json';
+import type { ShadowlordsMonster } from '../../src/generated/shadowlords3e-monster';
 import {
   validateAdd2eMonster,
   validateMonster,
@@ -36,10 +37,55 @@ describe('contrato de monstro Shadowlords', () => {
     expect(validateShadowlordsMonster(shadowlordsFixture)).toEqual({ valid: true, issues: [] });
   });
 
+  it('aponta os campos obrigatórios do formulário vazio', () => {
+    const monster = clone(shadowlordsFixture);
+    monster.name = '';
+    monster.profiles[0].label = '';
+    monster.profiles[0].statistics.attacks[0].name = '';
+    monster.narratives.description = '';
+    const issues = validateShadowlordsMonster(monster).issues;
+    expect(issues.some((issue) => issue.startsWith('/name:'))).toBe(true);
+    expect(issues.some((issue) => issue.startsWith('/profiles/0/label:'))).toBe(true);
+    expect(issues.some((issue) => issue.startsWith('/profiles/0/statistics/attacks/0/name:'))).toBe(true);
+    expect(issues.some((issue) => issue.startsWith('/narratives/description:'))).toBe(true);
+  });
+
   it('rejeita atributos fora do intervalo permitido', () => {
     const monster = clone(shadowlordsFixture);
     monster.profiles[0].statistics.attributes.for = 4;
     expect(validateShadowlordsMonster(monster).valid).toBe(false);
+  });
+
+  it('aplica os novos limites numéricos do formulário Shadowlords', () => {
+    const mutations: ((monster: ShadowlordsMonster) => void)[] = [
+      (monster) => { monster.profiles[0].statistics.hitPoints = 251; },
+      (monster) => { monster.profiles[0].statistics.defense.natural = 16; },
+      (monster) => { monster.profiles[0].statistics.defense.shieldBonus = 6; },
+      (monster) => { monster.profiles[0].statistics.damageReductions[0].value = 11; },
+      (monster) => { monster.profiles[0].statistics.damageReductions[0].uses = 16; },
+      (monster) => { monster.profiles[0].statistics.skills[0].modifier = 4; },
+      (monster) => { monster.profiles[0].statistics.spells[0].mode = 'spell'; monster.profiles[0].statistics.spells[0].pvCost = 21; },
+    ];
+
+    for (const mutate of mutations) {
+      const monster = clone(shadowlordsFixture) as unknown as ShadowlordsMonster;
+      mutate(monster);
+      expect(validateShadowlordsMonster(monster).valid).toBe(false);
+    }
+  });
+
+  it('aceita os limites superiores definidos para Defesa, PV, RD e modificadores', () => {
+    const monster = clone(shadowlordsFixture) as unknown as ShadowlordsMonster;
+    monster.profiles[0].statistics.hitPoints = 250;
+    monster.profiles[0].statistics.defense.natural = 15;
+    monster.profiles[0].statistics.defense.shieldBonus = 5;
+    monster.profiles[0].statistics.defense.final = 21;
+    monster.profiles[0].statistics.damageReductions[0].value = 10;
+    monster.profiles[0].statistics.damageReductions[0].uses = 15;
+    monster.profiles[0].statistics.skills[0].modifier = 3;
+    monster.profiles[0].statistics.spells[0].mode = 'spell';
+    monster.profiles[0].statistics.spells[0].pvCost = 20;
+    expect(validateShadowlordsMonster(monster)).toEqual({ valid: true, issues: [] });
   });
 
   it('exige ataque no perfil principal', () => {
@@ -96,7 +142,7 @@ describe('contrato de monstro Shadowlords', () => {
   });
 
   it('aceita o conjunto fechado das cinco idades dracônicas', () => {
-    const monster = clone(shadowlordsFixture);
+    const monster = clone(shadowlordsFixture) as unknown as ShadowlordsMonster;
     const baseProfile = monster.profiles[0];
     const categories = ['hatchling', 'young', 'adult', 'old', 'ancient'] as const;
     monster.dragonModuleEnabled = true;
@@ -131,6 +177,18 @@ describe('contrato de monstro Shadowlords', () => {
     });
 
     expect(validateShadowlordsMonster(monster)).toEqual({ valid: true, issues: [] });
+    const lowerBounds = clone(monster);
+    for (const profile of lowerBounds.profiles) {
+      profile.statistics.dragon!.breath.difficulty = 13;
+      profile.statistics.dragon!.airbornePhysicalAttackLimit = 0;
+    }
+    expect(validateShadowlordsMonster(lowerBounds).valid).toBe(true);
+    const invalidDifficulty = clone(monster);
+    invalidDifficulty.profiles[0].statistics.dragon!.breath.difficulty = 12;
+    expect(validateShadowlordsMonster(invalidDifficulty).issues.some((issue) => issue.includes('/difficulty:'))).toBe(true);
+    const invalidAirborneLimit = clone(monster);
+    invalidAirborneLimit.profiles[0].statistics.dragon!.airbornePhysicalAttackLimit = 2;
+    expect(validateShadowlordsMonster(invalidAirborneLimit).issues.some((issue) => issue.includes('/airbornePhysicalAttackLimit:'))).toBe(true);
   });
 
   it('valida pelo discriminador do sistema', () => {

@@ -146,5 +146,30 @@ mod tests {
             .execute(&pool)
             .await;
         assert!(bad_system.is_err());
+
+        let library_id = "4e5ac62a-29d5-4b2e-89a7-6ff2d2e0c75a";
+        sqlx::query("INSERT INTO libraries (id, system_code, name, sort_name, created_at, updated_at) VALUES (?, 'shadowlords3e', 'Biblioteca Shadowlords', 'biblioteca shadowlords', '2026-11-24T00:00:00Z', '2026-11-24T00:00:00Z')")
+            .bind(library_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let mut document: serde_json::Value = serde_json::from_str(include_str!(
+            "../../fixtures/shadowlords3e/valid-monster.json"
+        ))
+        .unwrap();
+        document["libraryId"] = serde_json::json!(library_id);
+        document["rowVersion"] = serde_json::json!(1);
+        sqlx::query("INSERT INTO monsters (id, library_id, name, sort_name, status, schema_key, schema_version, document_json, content_hash, created_at, updated_at, row_version) VALUES (?, ?, ?, ?, 'active', 'shadowlords3e.monster', 1, ?, ?, ?, ?, 1)")
+            .bind(document["id"].as_str().unwrap())
+            .bind(library_id)
+            .bind(document["name"].as_str().unwrap())
+            .bind("vigia de junco")
+            .bind(serde_json::to_string(&document).unwrap())
+            .bind(document["contentHash"].as_str().unwrap())
+            .bind(document["createdAt"].as_str().unwrap())
+            .bind(document["updatedAt"].as_str().unwrap())
+            .execute(&pool)
+            .await
+            .expect("migration must allow Shadowlords monster documents");
     }
 }

@@ -4,44 +4,77 @@ export type Uuid = string;
 export type Hash = string;
 export type Climate = {
   code:
-    | 'arctic'
-    | 'subarctic'
-    | 'cold'
-    | 'temperate'
-    | 'subtropical'
-    | 'tropical'
-    | 'hot'
     | 'arid'
+    | 'arctic'
+    | 'cold'
+    | 'hot'
+    | 'subarctic'
+    | 'subtropical'
+    | 'temperate'
+    | 'tropical'
     | 'any'
-    | 'extraplanar'
-    | 'special'
-    | 'other';
+    | 'any_except_arctic'
+    | 'non_tropical'
+    | 'variable';
   other: TextOrNull;
 };
 export type TextOrNull = string | null;
 export type Terrain = {
   code:
-    | 'underground'
-    | 'plains'
-    | 'forest'
-    | 'jungle'
-    | 'hills'
-    | 'mountains'
-    | 'swamp'
-    | 'desert'
-    | 'coast'
+    | 'abyss'
     | 'freshwater'
-    | 'ocean'
-    | 'aquatic'
-    | 'urban'
-    | 'ruins'
-    | 'wilderness'
-    | 'aerial'
+    | 'deep_water'
+    | 'shallow_water'
+    | 'saltwater'
+    | 'inhabited_areas'
+    | 'rural_areas'
+    | 'sandbanks'
+    | 'groves'
+    | 'caves'
+    | 'cemeteries'
+    | 'marshes'
+    | 'cities'
+    | 'hills'
+    | 'coasts'
+    | 'deserts'
     | 'space'
-    | 'extraplanar'
+    | 'forests'
+    | 'islands'
+    | 'lakes'
+    | 'labyrinths'
+    | 'seas'
+    | 'dungeons'
+    | 'mountains'
+    | 'clouds'
+    | 'oceans'
+    | 'swamps'
+    | 'plateaus'
+    | 'plains'
+    | 'reefs'
+    | 'wilderness'
+    | 'rivers'
+    | 'ruins'
+    | 'jungles'
+    | 'underground'
+    | 'polar_lands'
+    | 'tundras'
+    | 'tombs'
+    | 'valleys'
+    | 'volcanoes'
+    | 'elysium'
+    | 'wildspace'
+    | 'limbo'
+    | 'nine_hells'
+    | 'astral_plane'
+    | 'shadow_plane'
+    | 'ethereal_plane'
+    | 'prime_material_plane'
     | 'any'
+    | 'any_aquatic'
+    | 'any_terrestrial'
+    | 'any_underground'
     | 'special'
-    | 'other';
+    | 'variable';
   other: TextOrNull;
 };
 export type ActivityPeriod = {
@@ -146,19 +179,99 @@ export interface Profile {
   terrains: Terrain[];
   climateTerrainNotes: TextOrNull;
   frequency: {
-    code: 'common' | 'uncommon' | 'rare' | 'very_rare' | 'unique' | 'variable' | 'other';
+    code: 'common' | 'uncommon' | 'very_rare' | 'rare';
     other: TextOrNull;
   };
-  organization: string;
+  organization:
+    | 'cluster'
+    | 'angre'
+    | 'arrangement'
+    | 'band'
+    | 'grove'
+    | 'bunch'
+    | 'caliphate'
+    | 'school'
+    | 'clan'
+    | 'hive'
+    | 'colony'
+    | 'company'
+    | 'community'
+    | 'dictatorship'
+    | 'emirate'
+    | 'swarm'
+    | 'squad'
+    | 'family'
+    | 'genos'
+    | 'group'
+    | 'hunting_party'
+    | 'khanate'
+    | 'bed'
+    | 'herd'
+    | 'patch'
+    | 'pack'
+    | 'monarchy'
+    | 'ship_military'
+    | 'nest'
+    | 'padixado'
+    | 'pair'
+    | 'platoon'
+    | 'flock'
+    | 'flight'
+    | 'solitary'
+    | 'sultanate'
+    | 'tribe'
+    | 'none_multicellular'
+    | 'nation';
   /**
    * @minItems 1
    */
   activityPeriods: ActivityPeriod[];
   activityNotes: TextOrNull;
-  diet: string;
+  diet:
+    | 'water'
+    | 'air'
+    | 'assimilation'
+    | 'corpses'
+    | 'heat'
+    | 'meat'
+    | 'rotten_meat'
+    | 'carnivore'
+    | 'brains'
+    | 'fuel'
+    | 'dweomer'
+    | 'emotions'
+    | 'mental_energy'
+    | 'psionic_energy'
+    | 'fire'
+    | 'photosynthesis'
+    | 'herbivore'
+    | 'insectivore'
+    | 'books'
+    | 'magic'
+    | 'metals'
+    | 'minerals'
+    | 'scavenger'
+    | 'omnivore'
+    | 'fish'
+    | 'living_plasma'
+    | 'plankton'
+    | 'blood'
+    | 'living_beings'
+    | 'soil'
+    | 'earth'
+    | 'moisture'
+    | 'vegetarian'
+    | 'wind'
+    | 'special'
+    | 'none'
+    | 'none_known'
+    | 'not_applicable'
+    | 'null'
+    | 'any'
+    | 'variable';
   quantityEncounter: string;
-  size: string;
-  morale: string;
+  size: 'abyssal' | 'diminutive' | 'huge' | 'large' | 'immense' | 'medium' | 'small';
+  morale: number;
   treasure: string;
   specialDefensesSummary: string;
   magicProtectionSummary: string;
@@ -203,10 +316,10 @@ export interface Attack {
   attackFormula: string;
   attackNotes: string | null;
   damageFormula: string;
-  /**
-   * @minItems 1
-   */
-  damageTypes: (
+  range: string;
+  notes: string | null;
+  sortOrder: number;
+  damageType:
     | 'slashing'
     | 'piercing'
     | 'bludgeoning'
@@ -218,12 +331,8 @@ export interface Attack {
     | 'magic'
     | 'physical'
     | 'all'
-    | 'other'
-  )[];
-  range: string;
-  maxUsesPerRound: number | null;
-  notes: string | null;
-  sortOrder: number;
+    | 'other';
+  usageInterval: string;
 }
 export interface Skill {
   id: Uuid;
@@ -277,7 +386,7 @@ export interface Breath {
   element: string;
   damage: string;
   area: string;
-  saveAttribute: 'FOR' | 'AGI' | 'SAÚ' | 'INT' | 'SAB' | 'PER' | 'other';
+  saveAttribute: 'FOR' | 'AGI' | 'SAÚ' | 'INT' | 'SAB' | 'PER';
   difficulty: number;
   successEffect: string;
   activeDefenseAllowed: boolean;

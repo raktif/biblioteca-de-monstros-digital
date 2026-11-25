@@ -4,8 +4,8 @@
   "systemCode": "shadowlords3e",
   "schemaKey": "shadowlords3e.monster",
   "schemaVersion": 1,
-  "name": "Vigia de Junco",
-  "descriptors": ["Humanoide anfíbio", "patrulheiro de brejo"],
+  "name": "Bugbear",
+  "descriptors": ["Humanoide monstruoso", "guerreiro tribal"],
   "dragonModuleEnabled": false,
   "status": "active",
   "image": null,
@@ -26,16 +26,16 @@
       "isPrimary": true,
       "sortOrder": 0,
       "climates": [{ "code": "temperate", "other": null }],
-      "terrains": [{ "code": "swamp", "other": null }],
+      "terrains": [{ "code": "swamps", "other": null }],
       "climateTerrainNotes": null,
       "frequency": { "code": "uncommon", "other": null },
-      "organization": "Pequenas patrulhas",
+      "organization": "hunting_party",
       "activityPeriods": [{ "code": "night", "other": null }],
       "activityNotes": null,
-      "diet": "Onívora",
+      "diet": "omnivore",
       "quantityEncounter": "2-6",
-      "size": "Médio",
-      "morale": "Regular",
+      "size": "medium",
+      "morale": 2,
       "treasure": "Individual: pequeno",
       "specialDefensesSummary": "Nenhuma",
       "magicProtectionSummary": "Nenhuma",
@@ -53,7 +53,18 @@
           "otherDescription": null,
           "final": 11
         },
-        "damageReductions": [],
+        "damageReductions": [
+          {
+            "id": "de9110e8-21a1-4bcd-9987-e1b2e4c18c56",
+            "source": "Cota de couro endurecido",
+            "value": 2,
+            "damageTypes": ["slashing", "piercing"],
+            "usesMode": "limited",
+            "uses": 4,
+            "notes": null,
+            "sortOrder": 0
+          }
+        ],
         "attacks": [
           {
             "id": "ef1c5893-ffdd-47ca-8d87-caf6d37bf10f",
@@ -61,19 +72,62 @@
             "attackFormula": "2d6+1",
             "attackNotes": null,
             "damageFormula": "1d6+1",
-            "damageTypes": ["piercing"],
+            "damageType": "piercing",
             "range": "Corpo a corpo",
-            "maxUsesPerRound": 1,
+            "usageInterval": "1 por rodada",
             "notes": null,
             "sortOrder": 0
           }
         ],
         "activeDefense": { "enabled": false, "formula": null, "cost": null, "restrictions": null, "notes": null },
-        "skills": [],
+        "skills": [
+          { "id": "b8ce514b-3f92-486b-aaae-ea67915cd7dd", "name": "Rastreamento", "modifier": 2, "notes": null, "sortOrder": 0 }
+        ],
         "movement": "Normal para humanoide médio",
+        "traits": [
+          { "id": "d116fd7c-573c-481d-9e0b-695c7fa7634e", "name": "Visão no brejo", "category": "sense", "summary": "Enxerga com clareza na penumbra do pântano.", "details": null, "uses": null, "recharge": null, "sortOrder": 0 }
+        ],
+        "spells": [
+          { "id": "8f2f88ae-9c43-4f99-8bab-c70de452a9b5", "name": "Sinal de alerta", "mode": "innate", "castingSkill": null, "pvCost": null, "uses": "1 por encontro", "recharge": null, "notes": "Efeito fictício para validar a ficha.", "sortOrder": 0 }
+        ],
+        "specialsSummary": "Nenhuma",
+        "dragon": null
+      }
+    },
+    {
+      "id": "4b71f1a5-58a2-4375-9031-b7c7fb2fc265",
+      "label": "Bugbear chefe",
+      "kind": "leader",
+      "isPrimary": false,
+      "sortOrder": 1,
+      "climates": [{ "code": "temperate", "other": null }],
+      "terrains": [{ "code": "swamps", "other": null }],
+      "climateTerrainNotes": null,
+      "frequency": { "code": "rare", "other": null },
+      "organization": "band",
+      "activityPeriods": [{ "code": "night", "other": null }],
+      "activityNotes": null,
+      "diet": "omnivore",
+      "quantityEncounter": "1 + 2-6",
+      "size": "large",
+      "morale": 3,
+      "treasure": "Individual: moderado",
+      "specialDefensesSummary": "Nenhuma",
+      "magicProtectionSummary": "Nenhuma",
+      "profileNotes": "Variante de demonstração para a comparação de perfis.",
+      "statistics": {
+        "type": "shadowlords3e",
+        "attributes": { "for": 2, "agi": 1, "sau": 0, "int": 0, "sab": 1, "per": 0 },
+        "hitPoints": 20,
+        "defense": { "natural": 11, "armorBonus": 2, "shieldBonus": 0, "magicBonus": 0, "otherBonus": 0, "otherDescription": null, "final": 13 },
+        "damageReductions": [],
+        "attacks": [{ "id": "f01c0cb2-ce88-4eae-97e3-0ad47be54d3c", "name": "Machado de guerra", "attackFormula": "3d6+3", "attackNotes": null, "damageFormula": "2d6+2", "damageType": "slashing", "range": "Corpo a corpo", "usageInterval": "1 por rodada", "notes": null, "sortOrder": 0 }],
+        "activeDefense": { "enabled": false, "formula": null, "cost": null, "restrictions": null, "notes": null },
+        "skills": [],
+        "movement": "Normal para humanoide grande",
         "traits": [],
         "spells": [],
-        "specialsSummary": "Nenhuma",
+        "specialsSummary": "Coordena o grupo em combate.",
         "dragon": null
       }
     }

@@ -8,6 +8,7 @@ use unicode_normalization::UnicodeNormalization;
 use crate::error::{AppError, AppResult};
 
 static ADD2E_VALIDATOR: OnceLock<Validator> = OnceLock::new();
+static SHADOWLORDS_VALIDATOR: OnceLock<Validator> = OnceLock::new();
 
 fn validator() -> &'static Validator {
     ADD2E_VALIDATOR.get_or_init(|| {
@@ -16,6 +17,182 @@ fn validator() -> &'static Validator {
                 .expect("schema AD&D versionado deve ser JSON válido");
         jsonschema::validator_for(&schema).expect("schema AD&D versionado deve ser compilável")
     })
+}
+
+fn shadowlords_validator() -> &'static Validator {
+    SHADOWLORDS_VALIDATOR.get_or_init(|| {
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../schemas/shadowlords3e/v1/monster.schema.json"
+        ))
+        .expect("schema Shadowlords versionado deve ser JSON vÃ¡lido");
+        jsonschema::validator_for(&schema).expect("schema Shadowlords deve ser compilÃ¡vel")
+    })
+}
+
+pub fn validate_monster(document: &Value) -> AppResult<()> {
+    match document.get("systemCode").and_then(Value::as_str) {
+        Some("add2e") => validate_add2e(document),
+        Some("shadowlords3e") => validate_shadowlords(document),
+        _ => Err(AppError::new(
+            "MONSTER_SYSTEM_INVALID",
+            "O sistema da ficha nÃ£o Ã© reconhecido.",
+        )),
+    }
+}
+
+fn validate_shadowlords(document: &Value) -> AppResult<()> {
+    let mut issues = shadowlords_validator()
+        .iter_errors(document)
+        .take(12)
+        .map(|error| format!("{}: {error}", error.instance_path()))
+        .collect::<Vec<_>>();
+    let profiles = document.get("profiles").and_then(Value::as_array);
+    if let Some(profiles) = profiles {
+        let primary_count = profiles
+            .iter()
+            .filter(|profile| profile.get("isPrimary").and_then(Value::as_bool) == Some(true))
+            .count();
+        if primary_count != 1 {
+            issues.push("/profiles: deve haver exatamente um perfil principal.".into());
+        }
+        let mut dragon_ages = Vec::new();
+        let mut age_profiles = Vec::new();
+        for (index, profile) in profiles.iter().enumerate() {
+            let statistics = profile.get("statistics");
+            if profile.get("kind").and_then(Value::as_str) == Some("age") {
+                age_profiles.push(
+                    statistics
+                        .and_then(|value| value.get("dragon"))
+                        .filter(|value| !value.is_null())
+                        .and_then(|dragon| dragon.get("ageCategory"))
+                        .and_then(Value::as_str),
+                );
+            }
+            if profile.get("isPrimary").and_then(Value::as_bool) == Some(true)
+                && statistics
+                    .and_then(|value| value.get("attacks"))
+                    .and_then(Value::as_array)
+                    .is_none_or(Vec::is_empty)
+            {
+                issues.push(format!("/profiles/{index}/statistics/attacks: o perfil principal precisa ter ao menos um ataque."));
+            }
+            if let Some(defense) = statistics.and_then(|value| value.get("defense")) {
+                let fields = [
+                    "natural",
+                    "armorBonus",
+                    "shieldBonus",
+                    "magicBonus",
+                    "otherBonus",
+                ];
+                if fields
+                    .iter()
+                    .all(|key| defense.get(key).and_then(Value::as_i64).is_some())
+                {
+                    let total: i64 = fields
+                        .iter()
+                        .filter_map(|key| defense.get(key).and_then(Value::as_i64))
+                        .sum();
+                    if defense.get("final").and_then(Value::as_i64) != Some(total) {
+                        issues.push(format!("/profiles/{index}/statistics/defense/final: deve ser igual Ã  soma dos componentes ({total})."));
+                    }
+                }
+            }
+            if let Some(dragon) = statistics
+                .and_then(|value| value.get("dragon"))
+                .filter(|value| !value.is_null())
+            {
+                dragon_ages.push(
+                    dragon
+                        .get("ageCategory")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default(),
+                );
+                if profile.get("kind").and_then(Value::as_str) != Some("age") {
+                    issues.push(format!("/profiles/{index}/statistics/dragon: apenas perfil etÃ¡rio pode conter dados dracÃ´nicos."));
+                }
+            }
+            if profile
+                .pointer("/profileNotes")
+                .and_then(Value::as_str)
+                .is_some_and(contains_raw_html)
+            {
+                issues.push(format!(
+                    "/profiles/{index}/profileNotes: HTML bruto nao e permitido em Markdown."
+                ));
+            }
+            let statistics = statistics.unwrap_or(&Value::Null);
+            if statistics
+                .get("specialsSummary")
+                .and_then(Value::as_str)
+                .is_some_and(contains_raw_html)
+            {
+                issues.push(format!("/profiles/{index}/statistics/specialsSummary: HTML bruto nao e permitido em Markdown."));
+            }
+            if let Some(traits) = statistics.get("traits").and_then(Value::as_array) {
+                for (trait_index, item) in traits.iter().enumerate() {
+                    if item
+                        .get("details")
+                        .and_then(Value::as_str)
+                        .is_some_and(contains_raw_html)
+                    {
+                        issues.push(format!("/profiles/{index}/statistics/traits/{trait_index}/details: HTML bruto nao e permitido em Markdown."));
+                    }
+                }
+            }
+        }
+        if document.get("dragonModuleEnabled").and_then(Value::as_bool) == Some(true) {
+            let expected = ["hatchling", "young", "adult", "old", "ancient"];
+            if age_profiles.len() != expected.len()
+                || dragon_ages.len() != expected.len()
+                || expected.iter().any(|age| {
+                    age_profiles
+                        .iter()
+                        .filter(|value| **value == Some(*age))
+                        .count()
+                        != 1
+                })
+                || expected
+                    .iter()
+                    .any(|age| dragon_ages.iter().filter(|value| *value == age).count() != 1)
+            {
+                issues.push(
+                    "/profiles: o modulo draconico exige um perfil completo para cada uma das cinco idades."
+                        .into(),
+                );
+            }
+        } else if profiles.iter().any(|profile| {
+            profile
+                .pointer("/statistics/dragon")
+                .is_some_and(|value| !value.is_null())
+                || profile.get("kind").and_then(Value::as_str) == Some("age")
+        }) {
+            issues.push(
+                "/profiles: perfis etarios e dados de dragao exigem o modulo habilitado.".into(),
+            );
+        }
+    }
+    for path in [
+        "/narratives/description",
+        "/narratives/combat",
+        "/narratives/habitatSociety",
+        "/narratives/ecology",
+        "/narratives/tactics",
+        "/narratives/variations",
+        "/narratives/additionalNotes",
+    ] {
+        if document
+            .pointer(path)
+            .and_then(Value::as_str)
+            .is_some_and(contains_raw_html)
+        {
+            issues.push(format!("{path}: HTML bruto nÃ£o Ã© permitido em Markdown."));
+        }
+    }
+    if issues.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::new("MONSTER_SCHEMA_INVALID", issues.join("\n")))
+    }
 }
 
 pub fn validate_add2e(document: &Value) -> AppResult<()> {
@@ -160,7 +337,7 @@ fn contains_raw_html(markdown: &str) -> bool {
 mod tests {
     use serde_json::Value;
 
-    use super::{canonical_hash, validate_add2e};
+    use super::{canonical_hash, validate_add2e, validate_monster};
 
     #[test]
     fn validates_full_add2e_fixture_against_shared_schema() {
@@ -194,6 +371,22 @@ mod tests {
                 .unwrap_err()
                 .message
                 .contains("HTML bruto")
+        );
+    }
+
+    #[test]
+    fn validates_shadowlords_fixture_and_cross_field_defense_rule() {
+        let mut fixture: Value = serde_json::from_str(include_str!(
+            "../../fixtures/shadowlords3e/valid-monster.json"
+        ))
+        .unwrap();
+        assert!(validate_monster(&fixture).is_ok());
+        fixture["profiles"][0]["statistics"]["defense"]["final"] = serde_json::json!(12);
+        assert!(
+            validate_monster(&fixture)
+                .unwrap_err()
+                .message
+                .contains("defense/final")
         );
     }
 }
