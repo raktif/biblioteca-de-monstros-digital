@@ -15,11 +15,14 @@ import { MonsterSheet } from './MonsterSheet';
 import { ShadowlordsMonsterForm } from './ShadowlordsMonsterForm';
 import { ShadowlordsMonsterSheet } from './ShadowlordsMonsterSheet';
 import { MonsterBrowser } from './MonsterBrowser';
+import { PortableImportWizard } from './PortableImportWizard';
+import type { ImportReport } from '../infrastructure/portable';
 import type { Add2EMonster } from '../generated/add2e-monster';
 import type { ShadowlordsMonster } from '../generated/shadowlords3e-monster';
 import './app.css';
 
 type Page = 'libraries' | 'trash' | 'detail';
+type PortableImportMode = 'library' | 'monster';
 type Draft = { name: string; systemCode: SystemCode; imageDataUrl: string | null; removeImage: boolean };
 const emptyDraft: Draft = { name: '', systemCode: 'add2e', imageDataUrl: null, removeImage: false };
 
@@ -53,6 +56,7 @@ function App() {
   const [notice, setNotice] = useState('');
   const [deleteName, setDeleteName] = useState('');
   const [pendingClose, setPendingClose] = useState(false);
+  const [portableImportMode, setPortableImportMode] = useState<PortableImportMode | null>(null);
 
   const refresh = useCallback(async () => {
     const [active, removed] = await Promise.all([listLibraries(), listTrashedLibraries()]);
@@ -192,6 +196,13 @@ function App() {
     catch (reason) { setError(errorMessage(reason)); }
   }
 
+  function completePortableImport(report: ImportReport) {
+    setPortableImportMode(null);
+    setNotice(`${report.importedMonsterCount} monstro(s) importado(s)${report.renamedMonsterCount ? `; ${report.renamedMonsterCount} recebeu(ram) nome ajustado` : ''}.`);
+    void refresh();
+    if (selected) void listMonsters(selected.id, monsterStatusView).then(setMonsterRows).catch((reason) => setError(errorMessage(reason)));
+  }
+
   if (busy && !runtime && !error) return <main className="loading" role="status">Preparando sua biblioteca…</main>;
   if (readOnly) return <main className="startup-error"><section><p className="kicker">ARMAZENAMENTO INDISPONÍVEL</p><h1>Não foi possível abrir seus dados</h1><p>{error}</p><p>A aplicação iniciou em modo somente leitura para proteger os dados existentes. Feche e abra novamente; se o problema continuar, compartilhe o código de correlação com o suporte.</p><button className="secondary-button" onClick={() => window.location.reload()}>Tentar novamente</button></section></main>;
 
@@ -211,7 +222,7 @@ function App() {
       {notice && <div className="notice" role="status">{notice}<button onClick={() => setNotice('')} aria-label="Fechar">×</button></div>}
 
       {page === 'libraries' && !selected && <section className="page-section">
-        <div className="page-heading"><div><p className="kicker">SEU ACERVO</p><h1>Bibliotecas</h1><p className="subtitle">Organize seus monstros por sistema e campanha.</p></div><button className="primary-button" disabled={readOnly} onClick={beginCreate}>＋ <span>Nova biblioteca</span></button></div>
+        <div className="page-heading"><div><p className="kicker">SEU ACERVO</p><h1>Bibliotecas</h1><p className="subtitle">Organize seus monstros por sistema e campanha.</p></div><div className="page-heading-actions"><button className="secondary-button portable-action" disabled={readOnly} onClick={() => setPortableImportMode('library')}><span aria-hidden="true">↧</span> Importar biblioteca</button><button className="primary-button" disabled={readOnly} onClick={beginCreate}>＋ <span>Nova biblioteca</span></button></div></div>
         {libraries.length === 0 ? <div className="empty-state"><div className="empty-icon">♧</div><h2>Seu bestiário começa aqui</h2><p>Crie uma biblioteca para reunir fichas de monstros de AD&D 2ª Edição ou Shadowlords 3E.</p><button className="primary-button" disabled={readOnly} onClick={beginCreate}>Criar primeira biblioteca</button></div> : <div className="library-grid">{libraries.map((item) => <button className="library-card" key={item.id} onClick={() => void openLibrary(item)}>
           <div className="card-cover">{item.imageDataUrl ? <img src={item.imageDataUrl} alt="" /> : <span aria-hidden="true">♧</span>}<span className="card-count">{item.activeMonsterCount} monstros</span></div>
           <div className="card-info"><span className="system-label">{item.systemName}</span><h2>{item.name}</h2><span className="card-open">Abrir biblioteca <span aria-hidden="true">↗</span></span></div>
@@ -221,8 +232,8 @@ function App() {
       {page === 'detail' && selected && <section className="page-section">
         <button className="back-link" onClick={() => { setSelected(null); setPage('libraries'); }}>← Voltar às bibliotecas</button>
         <div className="detail-banner">{selected.imageDataUrl ? <img src={selected.imageDataUrl} alt="" /> : <span aria-hidden="true">♧</span>}</div>
-        <div className="detail-heading"><div><span className="system-label">{selected.systemName}</span><h1>{selected.name}</h1><p className="subtitle">{selected.activeMonsterCount} monstros ativos · {selected.totalMonsterCount} no total</p></div><div className="detail-actions"><button className="secondary-button" disabled={readOnly} onClick={() => beginEdit(selected)}>Editar biblioteca</button><button className="danger-button" disabled={readOnly} onClick={() => void removeLibrary(selected)}>Remover</button></div></div>
-        <div className="monster-list-header"><div className="monster-list-tabs" role="tablist" aria-label="Estado dos monstros">{(['active','archived','trashed'] as const).map((status) => <button key={status} role="tab" aria-selected={monsterStatusView === status} className={monsterStatusView === status ? 'monster-list-tab selected' : 'monster-list-tab'} onClick={async () => { setMonsterStatusView(status); setMonsterRecord(null); setMonsterRows(await listMonsters(selected.id, status)); }}>{status === 'active' ? 'Ativos' : status === 'archived' ? 'Arquivados' : 'Lixeira'}</button>)}</div>{monsterStatusView === 'active' && supportsMonsterEditor(selected.systemCode) && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>＋ Novo monstro</button>}</div>
+        <div className="detail-heading"><div><span className="system-label">{selected.systemName}</span><h1>{selected.name}</h1><p className="subtitle">{selected.activeMonsterCount} monstros ativos · {selected.totalMonsterCount} no total</p></div><div className="detail-actions"><button className="secondary-button portable-action" disabled={readOnly} onClick={() => setPortableImportMode('monster')}><span aria-hidden="true">↧</span> Importar monstro</button><button className="secondary-button portable-action" disabled title="A exportação ZIP será habilitada após a conexão do comando nativo."><span aria-hidden="true">↥</span> Exportar biblioteca</button><button className="secondary-button" disabled={readOnly} onClick={() => beginEdit(selected)}>Editar biblioteca</button><button className="danger-button" disabled={readOnly} onClick={() => void removeLibrary(selected)}>Remover</button></div></div>
+        <div className="monster-list-header"><div className="monster-list-tabs" role="tablist" aria-label="Estado dos monstros">{(['active','archived','trashed'] as const).map((status) => <button key={status} role="tab" aria-selected={monsterStatusView === status} className={monsterStatusView === status ? 'monster-list-tab selected' : 'monster-list-tab'} onClick={async () => { setMonsterStatusView(status); setMonsterRecord(null); setMonsterRows(await listMonsters(selected.id, status)); }}>{status === 'active' ? 'Ativos' : status === 'archived' ? 'Arquivados' : 'Lixeira'}</button>)}</div><div className="monster-header-actions">{monsterStatusView === 'active' && supportsMonsterEditor(selected.systemCode) && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>＋ Novo monstro</button>}</div></div>
         <MonsterBrowser libraryId={selected.id} rows={monsterRows} status={monsterStatusView} onOpen={(item) => void openMonster(item)} onRestore={(item) => void restoreTrashedMonster(item)} onDelete={(item) => { setMonsterDelete(item); setMonsterDeleteName(''); }} onRemove={(item) => void trashMonster(item)} />
         {monsterRows.length === 0 && monsterStatusView === 'active' && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>Cadastrar primeiro monstro</button>}
       </section>}
@@ -248,6 +259,8 @@ function App() {
     </section></div>}
 
     {pendingClose && <div className="modal-backdrop"><section className="dialog small-dialog" role="alertdialog" aria-modal="true" aria-labelledby="unsaved-title"><h2 id="unsaved-title">Alterações não salvas</h2><p>Deseja salvar as alterações antes de sair?</p><div className="dialog-actions"><button className="secondary-button" onClick={() => void closeEditor('continue')}>Continuar editando</button><button className="danger-button" onClick={() => void closeEditor('discard')}>Descartar</button><button className="primary-button" onClick={() => void closeEditor('save')}>Salvar</button></div></section></div>}
+
+    {portableImportMode && <div className="modal-backdrop"><PortableImportWizard mode={portableImportMode} targetLibraryId={portableImportMode === 'monster' ? selected?.id : undefined} onCancel={() => setPortableImportMode(null)} onCompleted={completePortableImport} /></div>}
 
     {page === 'trash' && selected && <div className="modal-backdrop"><section className="dialog small-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title"><button className="dialog-close" onClick={() => setSelected(null)} aria-label="Fechar">×</button><p className="kicker">AÇÃO IRREVERSÍVEL</p><h2 id="delete-title">Excluir biblioteca?</h2><p>Imagens e dados de <strong>{selected.name}</strong> serão removidos definitivamente. Digite o nome exato para confirmar.</p><label>Nome da biblioteca<input autoFocus value={deleteName} onChange={(event) => setDeleteName(event.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><button className="secondary-button" onClick={() => { setSelected(null); setError(''); }}>Cancelar</button><button className="danger-button" disabled={deleteName !== selected.name || busy} onClick={() => void permanentlyDelete(selected)}>Excluir definitivamente</button></div></section></div>}
     {monsterRecord?.document.systemCode === 'add2e' && selected && <MonsterSheet record={{ ...monsterRecord, document: monsterRecord.document as Add2EMonster }} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} />}
