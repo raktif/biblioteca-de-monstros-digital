@@ -107,8 +107,8 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .monster-list { display: grid; gap: 10px; }
 .monster-browser-controls { display:grid; grid-template-columns:minmax(200px,1.3fr) repeat(2,minmax(160px,1fr)) repeat(2,minmax(130px,.7fr)) auto; align-items:end; gap:10px; padding:14px; border:1px solid #e3e8e1; border-radius:10px; background:#fff; }
 .monster-browser-controls label { display:grid; min-width:0; gap:6px; color:#44574b; font-size:12px; font-weight:700; }
-.monster-browser-controls input,.monster-browser-controls select { width:100%; min-width:0; padding:9px 10px; border:1px solid #d9e1d8; border-radius:7px; background:#fff; color:#273b30; }
-.monster-browser-controls select[multiple] { height:42px; }
+.monster-browser-controls input,.monster-browser-controls select { box-sizing:border-box; width:100%; height:38px; min-width:0; padding:8px 10px; border:1px solid #d9e1d8; border-radius:7px; background:#fff; color:#273b30; }
+.monster-browser-controls select[multiple] { height:38px; padding-block:2px; }
 .browser-result-count { margin:12px 2px; color:#718076; font-size:12px; }
 .monster-browser-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
 .monster-grid-card { display:grid; gap:10px; align-content:start; padding:12px; border:1px solid #e3e8e1; border-radius:9px; background:#fff; }
