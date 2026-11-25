@@ -105,6 +105,17 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .monster-list-tab { padding: 9px 14px; border: 1px solid transparent; border-radius: 20px; color: #77847b; background: transparent; font-size: 12px; font-weight: 700; cursor: pointer; }
 .monster-list-tab.selected { border-color: #d6e0d5; color: #345846; background: #edf3eb; }
 .monster-list { display: grid; gap: 10px; }
+.monster-browser-controls { display:grid; grid-template-columns:minmax(200px,1.3fr) repeat(2,minmax(160px,1fr)) repeat(2,minmax(130px,.7fr)) auto; align-items:end; gap:10px; padding:14px; border:1px solid #e3e8e1; border-radius:10px; background:#fff; }
+.monster-browser-controls label { display:grid; min-width:0; gap:6px; color:#44574b; font-size:12px; font-weight:700; }
+.monster-browser-controls input,.monster-browser-controls select { width:100%; min-width:0; padding:9px 10px; border:1px solid #d9e1d8; border-radius:7px; background:#fff; color:#273b30; }
+.monster-browser-controls select[multiple] { height:42px; }
+.browser-result-count { margin:12px 2px; color:#718076; font-size:12px; }
+.monster-browser-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
+.monster-grid-card { display:grid; gap:10px; align-content:start; padding:12px; border:1px solid #e3e8e1; border-radius:9px; background:#fff; }
+.monster-grid-card .monster-summary-open { display:grid; justify-items:center; gap:10px; width:100%; text-align:center; }
+.monster-grid-card .mini-cover { width:128px; height:128px; flex-basis:128px; }
+.monster-grid-card .monster-summary-copy small { display:none; }
+.browser-pagination { display:flex; align-items:center; justify-content:center; gap:16px; padding:18px; color:#53645a; font-size:13px; }
 .monster-list-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #e3e8e1; border-radius: 9px; background: #fff; }
 .monster-summary-open { display: flex; min-width: 0; flex: 1; align-items: center; gap: 13px; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .monster-summary-open:disabled { cursor: default; opacity: 1; }
@@ -126,6 +137,12 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
 .monster-field { display: grid; min-width: 0; gap: 6px; color: #44574b; font-size: 12px; font-weight: 700; }
 .monster-field input, .monster-field select, .monster-field textarea { width: 100%; min-width: 0; padding: 10px 11px; border: 1px solid #d8e0d7; border-radius: 6px; color: #293d32; background: #fff; font-size: 13px; font-weight: 400; }
+.monster-field.invalid-field { color: #a33d32; }
+.monster-field input.invalid, .monster-field select.invalid, .monster-field textarea.invalid, .choice-group.invalid-field { border-color: #be5146; background: #fff8f6; }
+.choice-group.invalid-field > legend { color: #a33d32; }
+.field-error { display:block; color:#a33d32; font-size:11px; font-weight:500; line-height:1.4; }
+.terrain-choice-list { max-height:260px; overflow:auto; }
+.dragon-module-hint { display:block; margin: 8px 18px 14px; }
 .monster-field input, .monster-field select { min-height: 40px; }
 .monster-field textarea { resize: vertical; line-height: 1.55; }
 .monster-field .invalid, .monster-field input.invalid, .monster-field textarea.invalid { border-color: #be5146; background: #fff8f6; }
@@ -217,6 +234,8 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .image-viewer .dialog-close { z-index: 1; top: 0; right: 0; color: #fff; background: #ffffff22; }
 .image-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
 @media (max-width: 760px) {
+  .monster-browser-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .monster-browser-controls label:first-child { grid-column:1 / -1; }
   .monster-list-header { align-items: flex-start; flex-direction: column; }
   .monster-list-row { align-items: flex-start; flex-wrap: wrap; }
   .monster-row-actions { width: 100%; }
@@ -235,4 +254,27 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   .profile-switcher { display: flex; }
   .profile-compare-wide { display: none; }
   .monster-stat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+.shadowlords-sheet-body .shadowlords-identity { display:grid; grid-template-columns:minmax(0,1fr) minmax(220px,32%); gap:2rem; align-items:start; }
+.shadowlords-general-lines { margin-top:1.5rem; border-top:1px solid var(--line); }
+.shadowlords-general-lines > div { display:grid; grid-template-columns:minmax(130px,22%) 1fr; gap:1rem; padding:.7rem .85rem; border-bottom:1px solid var(--line); }
+.shadowlords-general-lines > div:nth-child(odd), .shadowlords-stat-lines > div:nth-child(odd) { background:#f4f5f7; }
+.shadowlords-general-lines strong { color:var(--ink-muted); font-size:.85rem; }
+.shadowlords-sheet-body .monster-sheet-image { width:100%; max-width:none; margin:0; }
+.shadowlords-stat-block h2 { text-transform:uppercase; letter-spacing:.12em; }
+.shadowlords-attribute-strip { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.5rem; margin:1rem 0; }
+.shadowlords-attribute-strip > div { display:grid; justify-items:center; gap:.25rem; padding:.7rem .35rem; background:#122c4a; color:#fff; border-radius:6px; }
+.shadowlords-attribute-strip span { font-size:.75rem; letter-spacing:.08em; }
+.shadowlords-attribute-strip strong { font-size:1.35rem; }
+.shadowlords-stat-lines { margin:0; }
+.shadowlords-stat-lines > div { display:grid; grid-template-columns:minmax(130px,22%) 1fr; gap:1rem; padding:.7rem .85rem; border-bottom:1px solid var(--line); }
+.shadowlords-stat-lines dt { color:var(--ink-muted); font-weight:700; }
+.shadowlords-stat-lines dd { margin:0; }
+.shadowlords-stat-lines small { color:var(--ink-muted); }
+.shadowlords-narratives { display:grid; grid-template-columns:1fr; gap:1rem; }
+@media (min-width:1100px) { .shadowlords-narratives { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:700px) {
+  .shadowlords-sheet-body .shadowlords-identity { grid-template-columns:1fr; }
+  .shadowlords-sheet-body .monster-sheet-image { max-width:320px; }
 }

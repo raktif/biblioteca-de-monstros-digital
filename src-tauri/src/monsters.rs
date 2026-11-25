@@ -15,7 +15,7 @@ use crate::{
     database::{AppState, utc_now},
     error::{AppError, AppResult},
     images::{NormalizedLibraryImage, StagedImageChange},
-    monster_validation::{canonical_hash, validate_add2e},
+    monster_validation::{canonical_hash, validate_monster},
 };
 
 #[derive(Debug, Serialize)]
@@ -28,7 +28,10 @@ pub struct MonsterSummary {
     pub status: String,
     pub image_data_url: Option<String>,
     pub updated_at: String,
+    pub created_at: String,
     pub row_version: i64,
+    pub terrains: Vec<String>,
+    pub activity_periods: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -76,6 +79,22 @@ pub async fn monster_list(
     rows.into_iter()
         .map(|row| {
             let document = parse_document(&row.document_json)?;
+            let (terrains, activity_periods) = document
+                .get("profiles")
+                .and_then(Value::as_array)
+                .map(|profiles| {
+                    let collect_codes = |field: &str| {
+                        let mut values = profiles.iter()
+                            .flat_map(|profile| profile.get(field).and_then(Value::as_array).into_iter().flatten())
+                            .filter_map(|entry| entry.get("code").and_then(Value::as_str).map(str::to_owned))
+                            .collect::<Vec<_>>();
+                        values.sort();
+                        values.dedup();
+                        values
+                    };
+                    (collect_codes("terrains"), collect_codes("activityPeriods"))
+                })
+                .unwrap_or_default();
             Ok(MonsterSummary {
                 id: row.id,
                 library_id: row.library_id,
@@ -83,11 +102,26 @@ pub async fn monster_list(
                 editorial_category: document
                     .get("editorialCategory")
                     .and_then(Value::as_str)
-                    .map(str::to_owned),
+                    .map(str::to_owned)
+                    .or_else(|| {
+                        document
+                            .get("descriptors")
+                            .and_then(Value::as_array)
+                            .map(|items| {
+                                items
+                                    .iter()
+                                    .filter_map(Value::as_str)
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            })
+                    }),
                 status: row.status,
                 image_data_url: thumbnail_data_url(state.app_data_dir(), row.image_path.as_deref()),
                 updated_at: row.updated_at,
+                created_at: document.get("createdAt").and_then(Value::as_str).unwrap_or_default().to_owned(),
                 row_version: row.row_version,
+                terrains,
+                activity_periods,
             })
         })
         .collect()
@@ -106,7 +140,12 @@ pub async fn monster_create(
     image_data_url: Option<String>,
 ) -> AppResult<MonsterDto> {
     let pool = state.pool().await?;
-    ensure_add2e_library(&pool, &library_id).await?;
+    let system_code = document
+        .get("systemCode")
+        .and_then(Value::as_str)
+        .ok_or_else(invalid_document)?
+        .to_owned();
+    ensure_library_system(&pool, &library_id, &system_code).await?;
     let id = Uuid::new_v4().to_string();
     let now = format_time(OffsetDateTime::now_utc())?;
     let name = validate_name(
@@ -120,10 +159,19 @@ pub async fn monster_create(
         .as_deref()
         .map(NormalizedLibraryImage::from_data_url)
         .transpose()?;
-    set_common_fields(&mut document, &id, &library_id, "active", 1, &now, &now)?;
+    set_common_fields(
+        &mut document,
+        &id,
+        &library_id,
+        &system_code,
+        "active",
+        1,
+        &now,
+        &now,
+    )?;
     set_image_metadata(&mut document, &id, image.as_ref());
     document["contentHash"] = Value::String(canonical_hash(&document)?);
-    validate_add2e(&document)?;
+    validate_monster(&document)?;
     let document_json = serde_json::to_string(&document).map_err(|_| {
         AppError::internal(
             "MONSTER_SERIALIZATION_FAILED",
@@ -142,11 +190,12 @@ pub async fn monster_create(
         .map(|image| stage_monster_image(state.app_data_dir(), &id, Some(image)))
         .transpose()?;
     let mut transaction = pool.begin().await?;
-    sqlx::query("INSERT INTO monsters (id, library_id, name, sort_name, status, schema_key, schema_version, document_json, image_path, thumbnail_path, image_hash, image_width, image_height, content_hash, created_at, updated_at, row_version) VALUES (?, ?, ?, ?, 'active', 'add2e.monster', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)")
+    sqlx::query("INSERT INTO monsters (id, library_id, name, sort_name, status, schema_key, schema_version, document_json, image_path, thumbnail_path, image_hash, image_width, image_height, content_hash, created_at, updated_at, row_version) VALUES (?, ?, ?, ?, 'active', ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)")
         .bind(&id)
         .bind(&library_id)
         .bind(&name)
         .bind(sort_name)
+        .bind(schema_key(&system_code)?)
         .bind(&document_json)
         .bind(&image_path)
         .bind(image_path.as_ref().map(|path| path.replace("main.webp", "thumb.webp")))
@@ -199,7 +248,18 @@ pub async fn monster_update(
     }
     let previous = parse_document(&current.document_json)?;
     let library_id = current.library_id.clone();
-    ensure_add2e_library(&pool, &library_id).await?;
+    let system_code = previous
+        .get("systemCode")
+        .and_then(Value::as_str)
+        .ok_or_else(invalid_document)?
+        .to_owned();
+    if document.get("systemCode").and_then(Value::as_str) != Some(system_code.as_str()) {
+        return Err(AppError::new(
+            "MONSTER_SYSTEM_MISMATCH",
+            "O sistema da ficha nÃ£o pode ser alterado.",
+        ));
+    }
+    ensure_library_system(&pool, &library_id, &system_code).await?;
     let name = validate_name(
         document
             .get("name")
@@ -219,6 +279,7 @@ pub async fn monster_update(
         &mut document,
         &id,
         &library_id,
+        &system_code,
         status,
         row_version,
         previous
@@ -235,7 +296,7 @@ pub async fn monster_update(
         set_image_metadata(&mut document, &id, image.as_ref());
     }
     document["contentHash"] = Value::String(canonical_hash(&document)?);
-    validate_add2e(&document)?;
+    validate_monster(&document)?;
     let document_json = serde_json::to_string(&document).map_err(|_| {
         AppError::internal(
             "MONSTER_SERIALIZATION_FAILED",
@@ -548,6 +609,7 @@ fn set_common_fields(
     document: &mut Value,
     id: &str,
     library_id: &str,
+    system_code: &str,
     status: &str,
     row_version: i64,
     created_at: &str,
@@ -561,8 +623,8 @@ fn set_common_fields(
     })?;
     object.insert("id".into(), json!(id));
     object.insert("libraryId".into(), json!(library_id));
-    object.insert("systemCode".into(), json!("add2e"));
-    object.insert("schemaKey".into(), json!("add2e.monster"));
+    object.insert("systemCode".into(), json!(system_code));
+    object.insert("schemaKey".into(), json!(schema_key(system_code)?));
     object.insert("schemaVersion".into(), json!(1));
     object.insert("status".into(), json!(status));
     object.insert("createdAt".into(), json!(created_at));
@@ -588,25 +650,42 @@ fn update_document_state(mut document: Value, status: &str, row_version: i64) ->
     document["updatedAt"] = json!(now);
     document["rowVersion"] = json!(row_version);
     document["contentHash"] = json!(canonical_hash(&document)?);
-    validate_add2e(&document)?;
+    validate_monster(&document)?;
     Ok(document)
 }
 
-async fn ensure_add2e_library(pool: &SqlitePool, id: &str) -> AppResult<()> {
+async fn ensure_library_system(pool: &SqlitePool, id: &str, expected: &str) -> AppResult<()> {
+    if !matches!(expected, "add2e" | "shadowlords3e") {
+        return Err(AppError::new(
+            "MONSTER_SYSTEM_INVALID",
+            "O sistema da ficha nÃ£o Ã© reconhecido.",
+        ));
+    }
     let system: Option<String> =
         sqlx::query_scalar("SELECT system_code FROM libraries WHERE id = ? AND deleted_at IS NULL")
             .bind(id)
             .fetch_optional(pool)
             .await?;
     match system.as_deref() {
-        Some("add2e") => Ok(()),
+        Some(actual) if actual == expected => Ok(()),
         Some(_) => Err(AppError::new(
             "MONSTER_SYSTEM_MISMATCH",
-            "Esta etapa aceita fichas AD&D 2ª Edição.",
+            "O sistema da ficha precisa corresponder ao sistema da biblioteca.",
         )),
         None => Err(AppError::new(
             "LIBRARY_NOT_FOUND",
             "A biblioteca não foi encontrada ou está na lixeira.",
+        )),
+    }
+}
+
+fn schema_key(system_code: &str) -> AppResult<&'static str> {
+    match system_code {
+        "add2e" => Ok("add2e.monster"),
+        "shadowlords3e" => Ok("shadowlords3e.monster"),
+        _ => Err(AppError::new(
+            "MONSTER_SYSTEM_INVALID",
+            "O sistema da ficha nÃ£o Ã© reconhecido.",
         )),
     }
 }
@@ -643,12 +722,12 @@ async fn sync_profiles(
             .bind(string_at(profile, "diet")?)
             .bind(string_at(profile, "quantityEncounter")?)
             .bind(string_at(profile, "size")?)
-            .bind(string_at(profile, "morale")?)
+            .bind(scalar_string_at(profile, "morale")?)
             .bind(string_at(profile, "treasure")?)
             .bind(nullable_string_at(profile, "climateTerrainNotes"))
             .bind(nullable_string_at(profile, "activityNotes"))
-            .bind(string_at(statistics, "specialDefenses")?)
-            .bind(string_at(statistics, "magicResistance")?)
+            .bind(string_at(profile, "specialDefensesSummary").or_else(|_| string_at(statistics, "specialDefenses"))?)
+            .bind(string_at(profile, "magicProtectionSummary").or_else(|_| string_at(statistics, "magicResistance"))?)
             .bind(serde_json::to_string(statistics).map_err(|_| invalid_document())?)
             .bind(profile_json)
             .execute(&mut **transaction)
@@ -681,6 +760,14 @@ fn string_at<'a>(value: &'a Value, key: &str) -> AppResult<&'a str> {
     value
         .get(key)
         .and_then(Value::as_str)
+        .ok_or_else(invalid_document)
+}
+
+fn scalar_string_at(value: &Value, key: &str) -> AppResult<String> {
+    value
+        .get(key)
+        .filter(|value| value.is_string() || value.is_number())
+        .map(|value| value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string()))
         .ok_or_else(invalid_document)
 }
 
@@ -747,6 +834,13 @@ fn thumbnail_data_url(app_data_dir: &Path, image_path: Option<&str>) -> Option<S
         .map(|bytes| format!("data:image/webp;base64,{}", STANDARD.encode(bytes)))
 }
 
+fn main_image_data_url(app_data_dir: &Path, image_path: Option<&str>) -> Option<String> {
+    let path = safe_app_path(app_data_dir, image_path?)?;
+    fs::read(path)
+        .ok()
+        .map(|bytes| format!("data:image/webp;base64,{}", STANDARD.encode(bytes)))
+}
+
 fn safe_app_path(root: &Path, relative: &str) -> Option<PathBuf> {
     let path = Path::new(relative);
     if path.is_absolute()
@@ -787,7 +881,7 @@ async fn cleanup_or_enqueue(
 }
 
 fn to_dto_db(row: MonsterDbRow, app_data_dir: &Path) -> AppResult<MonsterDto> {
-    let image_data_url = thumbnail_data_url(app_data_dir, row.image_path.as_deref());
+    let image_data_url = main_image_data_url(app_data_dir, row.image_path.as_deref());
     Ok(MonsterDto {
         document: parse_document(&row.document_json)?,
         image_data_url,

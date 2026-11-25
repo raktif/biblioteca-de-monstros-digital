@@ -1,6 +1,9 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import type { Add2EMonster } from '../generated/add2e-monster';
-import { validateAdd2eMonster } from '../domain/validation';
+import type { ShadowlordsMonster } from '../generated/shadowlords3e-monster';
+import { validateMonster } from '../domain/validation';
+
+export type MonsterDocument = Add2EMonster | ShadowlordsMonster;
 
 export type MonsterStatus = 'active' | 'archived' | 'trashed';
 export interface MonsterSummary {
@@ -11,11 +14,14 @@ export interface MonsterSummary {
   status: MonsterStatus;
   imageDataUrl: string | null;
   updatedAt: string;
+  createdAt: string;
   rowVersion: number;
+  terrains: string[];
+  activityPeriods: string[];
 }
-export interface MonsterRecord { document: Add2EMonster; imageDataUrl: string | null }
-interface StoredMonster { document: Add2EMonster; imageDataUrl: string | null; previousStatus: 'active' | 'archived' | null }
-type MonsterInput = Add2EMonster;
+export interface MonsterRecord { document: MonsterDocument; imageDataUrl: string | null }
+interface StoredMonster { document: MonsterDocument; imageDataUrl: string | null; previousStatus: 'active' | 'archived' | null }
+type MonsterInput = MonsterDocument;
 
 const STORAGE_KEY = 'bmd.stage3.monsters';
 let memoryMonsters: StoredMonster[] = [];
@@ -38,8 +44,8 @@ function canonical(value: unknown): string {
   return JSON.stringify(typeof value === 'string' ? value.normalize('NFC') : value);
 }
 
-function withHash(document: Add2EMonster): Add2EMonster {
-  const copy = structuredClone(document) as Add2EMonster;
+function withHash<T extends MonsterDocument>(document: T): T {
+  const copy = structuredClone(document) as T;
   const hashInput = { ...copy } as Record<string, unknown>;
   delete hashInput.contentHash; delete hashInput.updatedAt; delete hashInput.rowVersion;
   if (hashInput.image && typeof hashInput.image === 'object') {
@@ -54,21 +60,26 @@ function withHash(document: Add2EMonster): Add2EMonster {
   return copy;
 }
 
-function getBrowserLibrary(id: string): { systemCode: string; deletedAt: string | null } {
+function getBrowserLibrary(id: string, fallbackSystem: string): { systemCode: string; deletedAt: string | null } {
   try {
     const stored = globalThis.localStorage?.getItem('bmd.stage2.libraries');
     const library = stored ? (JSON.parse(stored) as { id: string; systemCode: string; deletedAt: string | null }[]).find((item) => item.id === id) : undefined;
     if (library) return library;
   } catch { /* use no mock parent when browser storage is unavailable */ }
-  return { systemCode: 'add2e', deletedAt: null };
+  return { systemCode: fallbackSystem, deletedAt: null };
 }
 
 function summary(item: StoredMonster): MonsterSummary {
   return {
     id: item.document.id, libraryId: item.document.libraryId, name: item.document.name,
-    editorialCategory: item.document.editorialCategory, status: item.document.status,
-    imageDataUrl: item.imageDataUrl, updatedAt: item.document.updatedAt,
+    editorialCategory: item.document.systemCode === 'add2e'
+      ? item.document.editorialCategory
+      : item.document.descriptors.join(', ') || null,
+    status: item.document.status,
+    imageDataUrl: item.imageDataUrl, updatedAt: item.document.updatedAt, createdAt: item.document.createdAt,
     rowVersion: item.document.rowVersion ?? 1,
+    terrains: item.document.profiles.flatMap((profile) => profile.terrains.map((entry) => entry.code)),
+    activityPeriods: item.document.profiles.flatMap((profile) => profile.activityPeriods.map((entry) => entry.code)),
   };
 }
 
@@ -85,20 +96,20 @@ export async function getMonster(id: string): Promise<MonsterRecord> {
 }
 
 export async function createMonster(libraryId: string, document: MonsterInput, imageDataUrl: string | null): Promise<MonsterRecord> {
-  const validation = validateAdd2eMonster(document);
+  const validation = validateMonster(document);
   if (!validation.valid) throw { code: 'MONSTER_SCHEMA_INVALID', message: validation.issues.join('\n') };
   if (isTauri()) return invoke<MonsterRecord>('monster_create', { libraryId, document, imageDataUrl });
-  const library = getBrowserLibrary(libraryId);
+  const library = getBrowserLibrary(libraryId, document.systemCode);
   if (library.deletedAt) throw { code: 'LIBRARY_NOT_FOUND', message: 'A biblioteca está na lixeira.' };
-  if (library.systemCode !== 'add2e') throw { code: 'MONSTER_SYSTEM_MISMATCH', message: 'Esta etapa aceita fichas AD&D 2ª Edição.' };
+  if (library.systemCode !== document.systemCode) throw { code: 'MONSTER_SYSTEM_MISMATCH', message: 'O sistema da ficha precisa corresponder ao sistema da biblioteca.' };
   const now = new Date().toISOString();
-  const saved = withHash({ ...document, id: crypto.randomUUID(), libraryId, systemCode: 'add2e', schemaKey: 'add2e.monster', schemaVersion: 1, status: 'active', image: null, createdAt: now, updatedAt: now, rowVersion: 1 });
+  const saved = withHash({ ...document, id: crypto.randomUUID(), libraryId, schemaKey: `${document.systemCode}.monster`, schemaVersion: 1, status: 'active', image: null, createdAt: now, updatedAt: now, rowVersion: 1 } as MonsterDocument);
   writeBrowserMonsters([...readBrowserMonsters(), { document: saved, imageDataUrl, previousStatus: null }]);
   return { document: structuredClone(saved), imageDataUrl };
 }
 
 export async function updateMonster(id: string, document: MonsterInput, imageDataUrl: string | null, removeImage: boolean, expectedRowVersion: number): Promise<MonsterRecord> {
-  const validation = validateAdd2eMonster(document);
+  const validation = validateMonster(document);
   if (!validation.valid) throw { code: 'MONSTER_SCHEMA_INVALID', message: validation.issues.join('\n') };
   if (isTauri()) return invoke<MonsterRecord>('monster_update', { id, document, imageDataUrl, removeImage, expectedRowVersion });
   const items = readBrowserMonsters();
@@ -106,6 +117,7 @@ export async function updateMonster(id: string, document: MonsterInput, imageDat
   if (!current) throw { code: 'MONSTER_NOT_FOUND', message: 'Monstro não encontrado.' };
   if ((current.document.rowVersion ?? 1) !== expectedRowVersion) throw { code: 'CONFLICT_ROW_VERSION', message: 'A ficha foi alterada. Recarregue e tente novamente.' };
   const now = new Date().toISOString();
+  if (document.systemCode !== current.document.systemCode) throw { code: 'MONSTER_SYSTEM_MISMATCH', message: 'O sistema da ficha não pode ser alterado.' };
   const saved = withHash({ ...document, id, libraryId: current.document.libraryId, status: current.document.status, image: null, createdAt: current.document.createdAt, updatedAt: now, rowVersion: expectedRowVersion + 1 });
   const preview = removeImage ? null : imageDataUrl ?? current.imageDataUrl;
   writeBrowserMonsters(items.map((item) => item.document.id === id ? { ...item, document: saved, imageDataUrl: preview } : item));

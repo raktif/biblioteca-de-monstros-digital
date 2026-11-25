@@ -7,10 +7,16 @@ import {
 import {
   createMonster, deleteMonsterPermanently, getMonster, listMonsters, moveMonsterToTrash,
   restoreMonster, setMonsterArchived, updateMonster, type MonsterRecord, type MonsterStatus,
-  type MonsterSummary,
+  type MonsterSummary, type MonsterDocument,
 } from '../infrastructure/monsters';
+import { supportsMonsterEditor } from '../domain/monster-systems';
 import { MonsterForm } from './MonsterForm';
 import { MonsterSheet } from './MonsterSheet';
+import { ShadowlordsMonsterForm } from './ShadowlordsMonsterForm';
+import { ShadowlordsMonsterSheet } from './ShadowlordsMonsterSheet';
+import { MonsterBrowser } from './MonsterBrowser';
+import type { Add2EMonster } from '../generated/add2e-monster';
+import type { ShadowlordsMonster } from '../generated/shadowlords3e-monster';
 import './app.css';
 
 type Page = 'libraries' | 'trash' | 'detail';
@@ -136,7 +142,7 @@ function App() {
   const shownImage = draft.imageDataUrl ?? (editing ? editing.imageDataUrl : null);
 
   async function openLibrary(item: Library) {
-    setSelected(item); setPage('detail'); setMonsterRecord(null); setMonsterStatusView('active'); setMonsterError('');
+    setSelected(item); setPage('detail'); setMonsterRecord(null); setMonsterEditor(false); setMonsterStatusView('active'); setMonsterError('');
     try { setMonsterRows(await listMonsters(item.id, 'active')); }
     catch (reason) { setError(errorMessage(reason)); }
   }
@@ -146,7 +152,7 @@ function App() {
     catch (reason) { setError(errorMessage(reason)); }
   }
 
-  async function saveMonster(document: MonsterRecord['document'], imageDataUrl: string | null, removeImage: boolean) {
+  async function saveMonster(document: MonsterDocument, imageDataUrl: string | null, removeImage: boolean) {
     if (!selected) return;
     setMonsterSaving(true); setMonsterError('');
     try {
@@ -216,8 +222,9 @@ function App() {
         <button className="back-link" onClick={() => { setSelected(null); setPage('libraries'); }}>← Voltar às bibliotecas</button>
         <div className="detail-banner">{selected.imageDataUrl ? <img src={selected.imageDataUrl} alt="" /> : <span aria-hidden="true">♧</span>}</div>
         <div className="detail-heading"><div><span className="system-label">{selected.systemName}</span><h1>{selected.name}</h1><p className="subtitle">{selected.activeMonsterCount} monstros ativos · {selected.totalMonsterCount} no total</p></div><div className="detail-actions"><button className="secondary-button" disabled={readOnly} onClick={() => beginEdit(selected)}>Editar biblioteca</button><button className="danger-button" disabled={readOnly} onClick={() => void removeLibrary(selected)}>Remover</button></div></div>
-        <div className="monster-list-header"><div className="monster-list-tabs" role="tablist" aria-label="Estado dos monstros">{(['active','archived','trashed'] as const).map((status) => <button key={status} role="tab" aria-selected={monsterStatusView === status} className={monsterStatusView === status ? 'monster-list-tab selected' : 'monster-list-tab'} onClick={async () => { setMonsterStatusView(status); setMonsterRecord(null); setMonsterRows(await listMonsters(selected.id, status)); }}>{status === 'active' ? 'Ativos' : status === 'archived' ? 'Arquivados' : 'Lixeira'}</button>)}</div>{monsterStatusView === 'active' && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>＋ Novo monstro</button>}</div>
-        {monsterRows.length === 0 ? <div className="coming-panel"><span>✦</span><h2>{monsterStatusView === 'active' ? 'Nenhum monstro cadastrado' : monsterStatusView === 'archived' ? 'Nenhum monstro arquivado' : 'A lixeira está vazia'}</h2><p>{monsterStatusView === 'active' ? 'Cadastre a primeira ficha AD&D desta biblioteca.' : 'Os monstros desta seção aparecerão aqui.'}</p>{monsterStatusView === 'active' && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>Cadastrar primeiro monstro</button>}</div> : <div className="monster-list">{monsterRows.map((item) => <article className="monster-list-row" key={item.id}><button className="monster-summary-open" onClick={() => monsterStatusView === 'trashed' ? undefined : void openMonster(item)} disabled={monsterStatusView === 'trashed'}><span className="mini-cover">{item.imageDataUrl ? <img src={item.imageDataUrl} alt="" /> : '♧'}</span><span className="monster-summary-copy"><strong>{item.name}</strong><small>{item.editorialCategory ?? 'Sem categoria'} · Atualizado em {new Date(item.updatedAt).toLocaleDateString('pt-BR')}</small></span></button>{monsterStatusView === 'trashed' ? <div className="monster-row-actions"><button className="secondary-button" onClick={() => void restoreTrashedMonster(item)}>Restaurar</button><button className="danger-button" onClick={() => { setMonsterDelete(item); setMonsterDeleteName(''); }}>Excluir definitivamente</button></div> : <button className="secondary-button" onClick={() => void trashMonster(item)}>Remover</button>}</article>)}</div>}
+        <div className="monster-list-header"><div className="monster-list-tabs" role="tablist" aria-label="Estado dos monstros">{(['active','archived','trashed'] as const).map((status) => <button key={status} role="tab" aria-selected={monsterStatusView === status} className={monsterStatusView === status ? 'monster-list-tab selected' : 'monster-list-tab'} onClick={async () => { setMonsterStatusView(status); setMonsterRecord(null); setMonsterRows(await listMonsters(selected.id, status)); }}>{status === 'active' ? 'Ativos' : status === 'archived' ? 'Arquivados' : 'Lixeira'}</button>)}</div>{monsterStatusView === 'active' && supportsMonsterEditor(selected.systemCode) && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>＋ Novo monstro</button>}</div>
+        <MonsterBrowser libraryId={selected.id} rows={monsterRows} status={monsterStatusView} onOpen={(item) => void openMonster(item)} onRestore={(item) => void restoreTrashedMonster(item)} onDelete={(item) => { setMonsterDelete(item); setMonsterDeleteName(''); }} onRemove={(item) => void trashMonster(item)} />
+        {monsterRows.length === 0 && monsterStatusView === 'active' && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>Cadastrar primeiro monstro</button>}
       </section>}
 
       {page === 'trash' && <section className="page-section">
@@ -243,8 +250,10 @@ function App() {
     {pendingClose && <div className="modal-backdrop"><section className="dialog small-dialog" role="alertdialog" aria-modal="true" aria-labelledby="unsaved-title"><h2 id="unsaved-title">Alterações não salvas</h2><p>Deseja salvar as alterações antes de sair?</p><div className="dialog-actions"><button className="secondary-button" onClick={() => void closeEditor('continue')}>Continuar editando</button><button className="danger-button" onClick={() => void closeEditor('discard')}>Descartar</button><button className="primary-button" onClick={() => void closeEditor('save')}>Salvar</button></div></section></div>}
 
     {page === 'trash' && selected && <div className="modal-backdrop"><section className="dialog small-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title"><button className="dialog-close" onClick={() => setSelected(null)} aria-label="Fechar">×</button><p className="kicker">AÇÃO IRREVERSÍVEL</p><h2 id="delete-title">Excluir biblioteca?</h2><p>Imagens e dados de <strong>{selected.name}</strong> serão removidos definitivamente. Digite o nome exato para confirmar.</p><label>Nome da biblioteca<input autoFocus value={deleteName} onChange={(event) => setDeleteName(event.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><button className="secondary-button" onClick={() => { setSelected(null); setError(''); }}>Cancelar</button><button className="danger-button" disabled={deleteName !== selected.name || busy} onClick={() => void permanentlyDelete(selected)}>Excluir definitivamente</button></div></section></div>}
-    {monsterRecord && selected && <MonsterSheet record={monsterRecord} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} />}
-    {monsterEditor !== false && selected && <MonsterForm key={monsterEditor?.document.id ?? `new-${selected.id}`} libraryId={selected.id} initial={monsterEditor?.document} initialImage={monsterEditor?.imageDataUrl} saving={monsterSaving} serverError={monsterError} onCancel={() => { setMonsterEditor(false); setMonsterError(''); }} onSave={saveMonster} />}
+    {monsterRecord?.document.systemCode === 'add2e' && selected && <MonsterSheet record={{ ...monsterRecord, document: monsterRecord.document as Add2EMonster }} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} />}
+    {monsterRecord?.document.systemCode === 'shadowlords3e' && selected && <ShadowlordsMonsterSheet record={{ ...monsterRecord, document: monsterRecord.document as ShadowlordsMonster }} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} />}
+    {monsterEditor !== false && selected && (monsterEditor?.document.systemCode === 'add2e' || monsterEditor === null && selected.systemCode === 'add2e') && <MonsterForm key={monsterEditor?.document.id ?? `new-${selected.id}`} libraryId={selected.id} initial={monsterEditor?.document.systemCode === 'add2e' ? monsterEditor.document : undefined} initialImage={monsterEditor?.imageDataUrl} saving={monsterSaving} serverError={monsterError} onCancel={() => { setMonsterEditor(false); setMonsterError(''); }} onSave={saveMonster} />}
+    {monsterEditor !== false && selected && (monsterEditor?.document.systemCode === 'shadowlords3e' || monsterEditor === null && selected.systemCode === 'shadowlords3e') && <ShadowlordsMonsterForm key={monsterEditor?.document.id ?? `new-${selected.id}`} libraryId={selected.id} initial={monsterEditor?.document.systemCode === 'shadowlords3e' ? monsterEditor.document : undefined} initialImage={monsterEditor?.imageDataUrl} saving={monsterSaving} serverError={monsterError} onCancel={() => { setMonsterEditor(false); setMonsterError(''); }} onSave={saveMonster} />}
     {monsterDelete && <div className="modal-backdrop"><section className="dialog small-dialog" role="alertdialog" aria-modal="true" aria-labelledby="monster-delete-title"><button className="dialog-close" onClick={() => setMonsterDelete(null)} aria-label="Fechar">×</button><p className="kicker">AÇÃO IRREVERSÍVEL</p><h2 id="monster-delete-title">Excluir monstro?</h2><p>Os dados e a imagem de <strong>{monsterDelete.name}</strong> serão removidos definitivamente. Digite o nome exato para confirmar.</p><label>Nome do monstro<input autoFocus value={monsterDeleteName} onChange={(event) => setMonsterDeleteName(event.target.value)} /></label><div className="dialog-actions"><button className="secondary-button" onClick={() => setMonsterDelete(null)}>Cancelar</button><button className="danger-button" disabled={monsterDeleteName !== monsterDelete.name} onClick={() => void permanentlyDeleteMonster(monsterDelete)}>Excluir definitivamente</button></div></section></div>}
   </div>;
 }
