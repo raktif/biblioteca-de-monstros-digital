@@ -5,7 +5,7 @@ use std::{
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::Serialize;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{AssertSqlSafe, FromRow, SqlitePool};
 use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
 use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
 use uuid::Uuid;
@@ -57,12 +57,13 @@ const LIBRARY_SELECT: &str = "
     FROM libraries l JOIN systems s ON s.code = l.system_code
 ";
 
+#[tauri::command]
 pub async fn library_list(state: tauri::State<'_, AppState>) -> AppResult<Vec<LibraryDto>> {
     let pool = state.pool().await?;
     let query = format!(
         "{LIBRARY_SELECT} WHERE l.deleted_at IS NULL ORDER BY l.sort_name COLLATE BINARY, l.created_at, l.id"
     );
-    let rows = sqlx::query_as::<_, LibraryRow>(&query)
+    let rows = sqlx::query_as::<_, LibraryRow>(AssertSqlSafe(query.as_str()))
         .fetch_all(&pool)
         .await?;
     rows.into_iter()
@@ -70,10 +71,11 @@ pub async fn library_list(state: tauri::State<'_, AppState>) -> AppResult<Vec<Li
         .collect()
 }
 
+#[tauri::command]
 pub async fn library_get(state: tauri::State<'_, AppState>, id: String) -> AppResult<LibraryDto> {
     let pool = state.pool().await?;
     let query = format!("{LIBRARY_SELECT} WHERE l.id = ? AND l.deleted_at IS NULL");
-    let row = sqlx::query_as::<_, LibraryRow>(&query)
+    let row = sqlx::query_as::<_, LibraryRow>(AssertSqlSafe(query.as_str()))
         .bind(id)
         .fetch_optional(&pool)
         .await?
@@ -81,12 +83,13 @@ pub async fn library_get(state: tauri::State<'_, AppState>, id: String) -> AppRe
     to_dto(row, state.app_data_dir())
 }
 
+#[tauri::command]
 pub async fn library_trash_list(state: tauri::State<'_, AppState>) -> AppResult<Vec<LibraryDto>> {
     let pool = state.pool().await?;
     let query = format!(
         "{LIBRARY_SELECT} WHERE l.deleted_at IS NOT NULL AND l.purge_after > ? ORDER BY l.purge_after, l.sort_name COLLATE BINARY, l.id"
     );
-    let rows = sqlx::query_as::<_, LibraryRow>(&query)
+    let rows = sqlx::query_as::<_, LibraryRow>(AssertSqlSafe(query.as_str()))
         .bind(utc_now()?)
         .fetch_all(&pool)
         .await?;
@@ -95,6 +98,7 @@ pub async fn library_trash_list(state: tauri::State<'_, AppState>) -> AppResult<
         .collect()
 }
 
+#[tauri::command]
 pub async fn library_create(
     state: tauri::State<'_, AppState>,
     name: String,
@@ -163,6 +167,7 @@ pub async fn library_create(
     library_get_by_id(&pool, state.app_data_dir(), &id).await
 }
 
+#[tauri::command]
 pub async fn library_update(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -302,6 +307,7 @@ pub async fn library_update(
     library_get_by_id(&pool, state.app_data_dir(), &id).await
 }
 
+#[tauri::command]
 pub async fn library_move_to_trash(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -327,6 +333,7 @@ pub async fn library_move_to_trash(
     Ok(())
 }
 
+#[tauri::command]
 pub async fn library_restore(state: tauri::State<'_, AppState>, id: String) -> AppResult<()> {
     let pool = state.pool().await?;
     let now = utc_now()?;
@@ -356,6 +363,7 @@ pub async fn library_restore(state: tauri::State<'_, AppState>, id: String) -> A
     Ok(())
 }
 
+#[tauri::command]
 pub async fn library_delete_permanently(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -570,7 +578,7 @@ async fn library_get_by_id(
     id: &str,
 ) -> AppResult<LibraryDto> {
     let query = format!("{LIBRARY_SELECT} WHERE l.id = ? AND l.deleted_at IS NULL");
-    let row = sqlx::query_as::<_, LibraryRow>(&query)
+    let row = sqlx::query_as::<_, LibraryRow>(AssertSqlSafe(query.as_str()))
         .bind(id)
         .fetch_optional(pool)
         .await?

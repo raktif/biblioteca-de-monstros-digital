@@ -6,8 +6,8 @@ use std::{
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::Serialize;
 use serde_json::{Value, json};
-use sqlx::{FromRow, Sqlite, SqlitePool, Transaction};
-use time::{Duration, OffsetDateTime};
+use sqlx::{AssertSqlSafe, FromRow, Sqlite, SqlitePool, Transaction};
+use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
 use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
 use uuid::Uuid;
 
@@ -55,6 +55,7 @@ struct MonsterRow {
 
 const MONSTER_SELECT: &str = "SELECT m.id, m.library_id, m.name, m.status, m.document_json, m.image_path, m.updated_at, m.row_version FROM monsters m";
 
+#[tauri::command]
 pub async fn monster_list(
     state: tauri::State<'_, AppState>,
     library_id: String,
@@ -70,7 +71,7 @@ pub async fn monster_list(
     let query = format!(
         "{MONSTER_SELECT} JOIN libraries l ON l.id = m.library_id WHERE m.library_id = ? AND l.deleted_at IS NULL AND (? = 'all' OR m.status = ?) ORDER BY m.sort_name COLLATE BINARY, m.created_at, m.id"
     );
-    let rows = sqlx::query_as::<_, MonsterRow>(&query)
+    let rows = sqlx::query_as::<_, MonsterRow>(AssertSqlSafe(query.as_str()))
         .bind(library_id)
         .bind(&status)
         .bind(&status)
@@ -84,9 +85,18 @@ pub async fn monster_list(
                 .and_then(Value::as_array)
                 .map(|profiles| {
                     let collect_codes = |field: &str| {
-                        let mut values = profiles.iter()
-                            .flat_map(|profile| profile.get(field).and_then(Value::as_array).into_iter().flatten())
-                            .filter_map(|entry| entry.get("code").and_then(Value::as_str).map(str::to_owned))
+                        let mut values = profiles
+                            .iter()
+                            .flat_map(|profile| {
+                                profile
+                                    .get(field)
+                                    .and_then(Value::as_array)
+                                    .into_iter()
+                                    .flatten()
+                            })
+                            .filter_map(|entry| {
+                                entry.get("code").and_then(Value::as_str).map(str::to_owned)
+                            })
                             .collect::<Vec<_>>();
                         values.sort();
                         values.dedup();
@@ -118,7 +128,11 @@ pub async fn monster_list(
                 status: row.status,
                 image_data_url: thumbnail_data_url(state.app_data_dir(), row.image_path.as_deref()),
                 updated_at: row.updated_at,
-                created_at: document.get("createdAt").and_then(Value::as_str).unwrap_or_default().to_owned(),
+                created_at: document
+                    .get("createdAt")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned(),
                 row_version: row.row_version,
                 terrains,
                 activity_periods,
@@ -127,12 +141,14 @@ pub async fn monster_list(
         .collect()
 }
 
+#[tauri::command]
 pub async fn monster_get(state: tauri::State<'_, AppState>, id: String) -> AppResult<MonsterDto> {
     let pool = state.pool().await?;
     let row = fetch_monster(&pool, &id, false).await?;
     to_dto_db(row, state.app_data_dir())
 }
 
+#[tauri::command]
 pub async fn monster_create(
     state: tauri::State<'_, AppState>,
     library_id: String,
@@ -227,6 +243,7 @@ pub async fn monster_create(
     get_by_id(&pool, state.app_data_dir(), &id).await
 }
 
+#[tauri::command]
 pub async fn monster_update(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -406,6 +423,7 @@ pub async fn monster_update(
     get_by_id(&pool, state.app_data_dir(), &id).await
 }
 
+#[tauri::command]
 pub async fn monster_set_archived(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -444,6 +462,7 @@ pub async fn monster_set_archived(
     get_by_id(&pool, state.app_data_dir(), &id).await
 }
 
+#[tauri::command]
 pub async fn monster_move_to_trash(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -483,6 +502,7 @@ pub async fn monster_move_to_trash(
     Ok(())
 }
 
+#[tauri::command]
 pub async fn monster_restore(state: tauri::State<'_, AppState>, id: String) -> AppResult<()> {
     let pool = state.pool().await?;
     let row = fetch_monster(&pool, &id, true).await?;
@@ -526,6 +546,7 @@ pub async fn monster_restore(state: tauri::State<'_, AppState>, id: String) -> A
     Ok(())
 }
 
+#[tauri::command]
 pub async fn monster_delete_permanently(
     state: tauri::State<'_, AppState>,
     id: String,
@@ -572,7 +593,7 @@ async fn fetch_monster(
     let query = format!(
         "SELECT m.library_id, m.name, m.status, m.previous_status, m.document_json, m.image_path, m.purge_after, m.row_version FROM monsters m JOIN libraries l ON l.id = m.library_id WHERE m.id = ? AND l.deleted_at IS NULL{trashed_clause}"
     );
-    sqlx::query_as::<_, MonsterDbRow>(&query)
+    sqlx::query_as::<_, MonsterDbRow>(AssertSqlSafe(query.as_str()))
         .bind(id)
         .fetch_optional(pool)
         .await?
@@ -742,14 +763,23 @@ async fn sync_profiles(
                 .and_then(Value::as_array)
                 .ok_or_else(invalid_document)?;
             for entry in entries {
-                sqlx::query(&format!(
-                    "INSERT INTO {table} (profile_id, code, other_text) VALUES (?, ?, ?)"
-                ))
-                .bind(id)
-                .bind(string_at(entry, "code")?)
-                .bind(nullable_string_at(entry, "other"))
-                .execute(&mut **transaction)
-                .await?;
+                let query = match table {
+                    "profile_climates" => {
+                        "INSERT INTO profile_climates (profile_id, code, other_text) VALUES (?, ?, ?)"
+                    }
+                    "profile_terrains" => {
+                        "INSERT INTO profile_terrains (profile_id, code, other_text) VALUES (?, ?, ?)"
+                    }
+                    _ => {
+                        "INSERT INTO profile_activity_periods (profile_id, code, other_text) VALUES (?, ?, ?)"
+                    }
+                };
+                sqlx::query(query)
+                    .bind(id)
+                    .bind(string_at(entry, "code")?)
+                    .bind(nullable_string_at(entry, "other"))
+                    .execute(&mut **transaction)
+                    .await?;
             }
         }
     }
@@ -767,7 +797,12 @@ fn scalar_string_at(value: &Value, key: &str) -> AppResult<String> {
     value
         .get(key)
         .filter(|value| value.is_string() || value.is_number())
-        .map(|value| value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string()))
+        .map(|value| {
+            value
+                .as_str()
+                .map(str::to_owned)
+                .unwrap_or_else(|| value.to_string())
+        })
         .ok_or_else(invalid_document)
 }
 
