@@ -16,6 +16,7 @@
     "test": "vitest run",
     "schemas:generate": "node scripts/generate-types.mjs",
     "schemas:check": "node scripts/generate-types.mjs --check",
+    "portable:check": "node scripts/check-portable-schemas.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

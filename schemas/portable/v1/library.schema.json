@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biblioteca-de-monstros-digital.local/schemas/portable/v1/library.schema.json",
+  "title": "Biblioteca portátil BMD v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["format", "formatVersion", "kind", "systemCode", "schemaKey", "schemaVersion", "library"],
+  "properties": {
+    "format": { "const": "biblioteca-de-monstros-digital.library" },
+    "formatVersion": { "const": 1 }, "kind": { "const": "library" },
+    "systemCode": { "enum": ["add2e", "shadowlords3e"] },
+    "schemaKey": { "enum": ["add2e.monster", "shadowlords3e.monster"] },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "library": {
+      "type": "object", "additionalProperties": false, "required": ["name", "image"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "image": { "oneOf": [{ "$ref": "common.schema.json#/$defs/imageRef" }, { "type": "null" }] }
+      }
+    }
+  }
+}

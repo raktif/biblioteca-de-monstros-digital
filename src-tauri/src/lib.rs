@@ -4,6 +4,8 @@ mod images;
 mod libraries;
 mod monster_validation;
 mod monsters;
+#[allow(dead_code)]
+mod portable;
 
 use std::path::PathBuf;
 

@@ -1,0 +1,9 @@
+{
+  "format": "biblioteca-de-monstros-digital.library",
+  "formatVersion": 1,
+  "kind": "library",
+  "systemCode": "add2e",
+  "schemaKey": "add2e.monster",
+  "schemaVersion": 1,
+  "library": { "name": "Biblioteca AD&D de Referência", "image": null }
+}

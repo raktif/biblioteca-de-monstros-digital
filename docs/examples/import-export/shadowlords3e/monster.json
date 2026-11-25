@@ -1,0 +1,29 @@
+{
+  "format": "biblioteca-de-monstros-digital.shadowlords3e.monster",
+  "formatVersion": 1,
+  "kind": "monster",
+  "systemCode": "shadowlords3e",
+  "schemaKey": "shadowlords3e.monster",
+  "schemaVersion": 1,
+  "monster": {
+    "name": "Bugbear",
+    "descriptors": ["Humanoide monstruoso"],
+    "dragonModuleEnabled": false,
+    "status": "active",
+    "image": null,
+    "narratives": { "description": "Criatura de teste.", "combat": "Ataca em emboscadas.", "habitatSociety": "Vive em cavernas.", "ecology": "Carnívoro.", "tactics": null, "variations": null, "additionalNotes": null },
+    "profiles": [{
+      "label": "Bugbear comum", "kind": "primary", "isPrimary": true,
+      "climates": [{ "code": "any", "other": null }], "terrains": [{ "code": "underground", "other": null }], "climateTerrainNotes": null,
+      "frequency": { "code": "uncommon", "other": null }, "organization": "tribe", "activityPeriods": [{ "code": "any", "other": null }], "activityNotes": null,
+      "diet": "carnivore", "quantityEncounter": "2d4", "size": "large", "morale": 1, "treasure": "Individual", "specialDefensesSummary": null, "magicProtectionSummary": null, "profileNotes": null,
+      "statistics": {
+        "type": "shadowlords3e", "attributes": { "for": 2, "agi": 1, "sau": 1, "int": 0, "sab": 0, "per": -1 }, "hitPoints": 15,
+        "defense": { "natural": 11, "armorBonus": 2, "shieldBonus": 0, "magicBonus": 0, "otherBonus": 0, "otherDescription": null, "final": 13 },
+        "damageReductions": [], "attacks": [{ "name": "Maça", "attackFormula": "3d6+3", "attackNotes": null, "damageFormula": "2d6+2", "damageType": "bludgeoning", "range": "Corpo a corpo", "usageInterval": "1 por rodada", "notes": null }],
+        "activeDefense": { "enabled": true, "formula": "3d6+2", "cost": "Ação", "restrictions": null, "notes": null }, "skills": [], "movement": "Normal", "traits": [], "spells": [], "specialsSummary": "Emboscada", "dragon": null
+      }
+    }],
+    "sources": [{ "title": "Ficha de teste", "entry": "Bugbear", "page": null, "notes": null }]
+  }
+}

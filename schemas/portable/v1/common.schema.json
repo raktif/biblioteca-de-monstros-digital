@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biblioteca-de-monstros-digital.local/schemas/portable/v1/common.schema.json",
+  "$defs": {
+    "portablePath": { "type": "string", "minLength": 1, "maxLength": 512, "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._~!$&'()+,;=@%/ -]+$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "imageRef": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "mediaType", "width", "height"],
+      "properties": {
+        "path": { "$ref": "#/\u0024defs/portablePath" },
+        "mediaType": { "enum": ["image/jpeg", "image/png", "image/webp"] },
+        "width": { "type": "integer", "minimum": 1, "maximum": 2048 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 2048 }
+      }
+    },
+    "status": { "enum": ["active", "archived"] },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "entry", "page", "notes"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "entry": { "type": ["string", "null"], "maxLength": 200 },
+        "page": { "type": ["string", "null"], "maxLength": 80 },
+        "notes": { "type": ["string", "null"], "maxLength": 1000 }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "format": "biblioteca-de-monstros-digital.library",
+  "formatVersion": 1,
+  "kind": "library",
+  "systemCode": "shadowlords3e",
+  "schemaKey": "shadowlords3e.monster",
+  "schemaVersion": 1,
+  "library": { "name": "Biblioteca Shadowlords de Referência", "image": null }
+}

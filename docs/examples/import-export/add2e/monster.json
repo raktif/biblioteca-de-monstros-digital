@@ -1,0 +1,24 @@
+{
+  "format": "biblioteca-de-monstros-digital.add2e.monster",
+  "formatVersion": 1,
+  "kind": "monster",
+  "systemCode": "add2e",
+  "schemaKey": "add2e.monster",
+  "schemaVersion": 1,
+  "monster": {
+    "name": "Bugbear",
+    "editorialCategory": "Humanoide monstruoso",
+    "status": "active",
+    "image": null,
+    "narratives": { "description": "Criatura de teste.", "combat": "Ataca em emboscadas.", "habitatSociety": "Vive em cavernas.", "ecology": "Onívoro.", "variations": null, "additionalNotes": null },
+    "profiles": [{
+      "label": "Bugbear comum", "kind": "primary", "isPrimary": true,
+      "climates": [{ "code": "any", "other": null }], "terrains": [{ "code": "underground", "other": null }], "climateTerrainNotes": null,
+      "frequency": { "code": "uncommon", "other": null }, "organization": "Tribal", "activityPeriods": [{ "code": "any", "other": null }], "activityNotes": null,
+      "diet": "Carnívora", "treasure": "Individual", "quantityEncounter": "2-8", "size": "Grande", "morale": "11", "profileNotes": null,
+      "statistics": { "type": "add2e", "intelligence": "Baixa", "alignment": "Cruel", "armorClass": "5", "movement": "9", "hitDice": "3+1", "thac0": "17", "attacksPerRound": "1", "damagePerAttack": "2-8", "specialAttacks": "Surpresa", "specialDefenses": "Nula", "magicResistance": "Nula", "experienceValue": "120", "psionics": null }
+    }],
+    "auxiliaryTables": [],
+    "sources": [{ "title": "Livro dos Monstros", "entry": "Bugbear", "page": "38", "notes": null }]
+  }
+}
