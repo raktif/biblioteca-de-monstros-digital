@@ -4,6 +4,7 @@ mod images;
 mod libraries;
 mod monster_validation;
 mod monsters;
+mod package_io;
 #[allow(dead_code)]
 mod portable;
 

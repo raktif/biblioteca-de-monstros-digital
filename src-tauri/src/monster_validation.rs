@@ -297,7 +297,10 @@ pub fn canonical_hash(document: &Value) -> AppResult<String> {
             "Não foi possível preparar o conteúdo da ficha.",
         )
     })?;
-    Ok(format!("{:x}", sha2::Sha256::digest(serialized)))
+    Ok(sha2::Sha256::digest(serialized)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>())
 }
 
 fn normalize_strings(value: &mut Value) {

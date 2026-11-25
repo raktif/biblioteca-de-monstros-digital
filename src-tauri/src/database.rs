@@ -1,7 +1,7 @@
 use std::{path::PathBuf, time::Duration};
 
 use sqlx::{
-    SqlitePool,
+    AssertSqlSafe, SqlitePool,
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions},
 };
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
@@ -82,7 +82,7 @@ impl AppState {
                         std::fs::remove_file(&backup_path)?;
                     }
                     let escaped_path = backup_path.to_string_lossy().replace('\'', "''");
-                    sqlx::query(&format!("VACUUM INTO '{escaped_path}'"))
+                    sqlx::query(AssertSqlSafe(format!("VACUUM INTO '{escaped_path}'")))
                         .execute(&pool)
                         .await?;
                 }

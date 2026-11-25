@@ -85,7 +85,7 @@ impl NormalizedLibraryImage {
             return Err(invalid_image("Imagens WebP animadas não são aceitas."));
         }
 
-        let decoder = reader
+        let mut decoder = reader
             .into_decoder()
             .map_err(|_| invalid_image("Não foi possível ler a imagem selecionada."))?;
         let (input_width, input_height) = decoder.dimensions();
@@ -125,7 +125,10 @@ impl NormalizedLibraryImage {
         );
         let main_bytes = encode_webp(image)?;
         let thumbnail_bytes = encode_webp(thumbnail)?;
-        let sha256 = format!("{:x}", Sha256::digest(&main_bytes));
+        let sha256 = Sha256::digest(&main_bytes)
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
 
         Ok(Self {
             main_bytes,
