@@ -28,7 +28,10 @@ pub struct MonsterSummary {
     pub status: String,
     pub image_data_url: Option<String>,
     pub updated_at: String,
+    pub created_at: String,
     pub row_version: i64,
+    pub terrains: Vec<String>,
+    pub activity_periods: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -76,6 +79,22 @@ pub async fn monster_list(
     rows.into_iter()
         .map(|row| {
             let document = parse_document(&row.document_json)?;
+            let (terrains, activity_periods) = document
+                .get("profiles")
+                .and_then(Value::as_array)
+                .map(|profiles| {
+                    let collect_codes = |field: &str| {
+                        let mut values = profiles.iter()
+                            .flat_map(|profile| profile.get(field).and_then(Value::as_array).into_iter().flatten())
+                            .filter_map(|entry| entry.get("code").and_then(Value::as_str).map(str::to_owned))
+                            .collect::<Vec<_>>();
+                        values.sort();
+                        values.dedup();
+                        values
+                    };
+                    (collect_codes("terrains"), collect_codes("activityPeriods"))
+                })
+                .unwrap_or_default();
             Ok(MonsterSummary {
                 id: row.id,
                 library_id: row.library_id,
@@ -99,7 +118,10 @@ pub async fn monster_list(
                 status: row.status,
                 image_data_url: thumbnail_data_url(state.app_data_dir(), row.image_path.as_deref()),
                 updated_at: row.updated_at,
+                created_at: document.get("createdAt").and_then(Value::as_str).unwrap_or_default().to_owned(),
                 row_version: row.row_version,
+                terrains,
+                activity_periods,
             })
         })
         .collect()

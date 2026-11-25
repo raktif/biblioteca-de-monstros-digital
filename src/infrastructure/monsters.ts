@@ -14,7 +14,10 @@ export interface MonsterSummary {
   status: MonsterStatus;
   imageDataUrl: string | null;
   updatedAt: string;
+  createdAt: string;
   rowVersion: number;
+  terrains: string[];
+  activityPeriods: string[];
 }
 export interface MonsterRecord { document: MonsterDocument; imageDataUrl: string | null }
 interface StoredMonster { document: MonsterDocument; imageDataUrl: string | null; previousStatus: 'active' | 'archived' | null }
@@ -73,8 +76,10 @@ function summary(item: StoredMonster): MonsterSummary {
       ? item.document.editorialCategory
       : item.document.descriptors.join(', ') || null,
     status: item.document.status,
-    imageDataUrl: item.imageDataUrl, updatedAt: item.document.updatedAt,
+    imageDataUrl: item.imageDataUrl, updatedAt: item.document.updatedAt, createdAt: item.document.createdAt,
     rowVersion: item.document.rowVersion ?? 1,
+    terrains: item.document.profiles.flatMap((profile) => profile.terrains.map((entry) => entry.code)),
+    activityPeriods: item.document.profiles.flatMap((profile) => profile.activityPeriods.map((entry) => entry.code)),
   };
 }
 
