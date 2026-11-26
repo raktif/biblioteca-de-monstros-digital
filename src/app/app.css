@@ -302,12 +302,12 @@ body:has(.monster-sheet-overlay) { overflow: hidden; }
   .monster-browser-controls { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 
-.shadowlords-sheet-body .shadowlords-identity { display:grid; grid-template-columns:minmax(0,1fr) minmax(220px,32%); gap:2rem; align-items:start; }
+.shadowlords-sheet-body .shadowlords-identity { display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,38%); gap:2rem; align-items:start; }
 .shadowlords-general-lines { margin-top:1.5rem; border-top:1px solid var(--line); }
 .shadowlords-general-lines > div { display:grid; grid-template-columns:minmax(130px,22%) 1fr; gap:1rem; padding:.7rem .85rem; border-bottom:1px solid var(--line); }
 .shadowlords-general-lines > div:nth-child(odd), .shadowlords-stat-lines > div:nth-child(odd) { background:#f4f5f7; }
 .shadowlords-general-lines strong { color:var(--ink-muted); font-size:.85rem; }
-.shadowlords-sheet-body .monster-sheet-image { width:100%; max-width:none; margin:0; }
+.shadowlords-sheet-body .monster-sheet-image { width:100%; max-width:none; height:auto; aspect-ratio:2 / 3; margin:0; }
 .shadowlords-stat-block h2 { text-transform:uppercase; letter-spacing:.12em; }
 .shadowlords-attribute-strip { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.5rem; margin:1rem 0; }
 .shadowlords-attribute-strip > div { display:grid; justify-items:center; gap:.25rem; padding:.7rem .35rem; background:#122c4a; color:#fff; border-radius:6px; }
