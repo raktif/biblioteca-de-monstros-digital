@@ -6,14 +6,14 @@ import { activityOptions, climateOptions, damageTypeOptions, dietOptions, freque
 
 type Props = {
   record: Omit<MonsterRecord, 'document'> & { document: ShadowlordsMonster };
-  onClose: () => void; onEdit: () => void; onArchive: (archived: boolean) => void; onTrash: () => void;
+  onClose: () => void; onEdit: () => void; onArchive: (archived: boolean) => void; onTrash: () => void; onExport: () => void;
 };
 
 const attributeNames: Record<keyof Profile['statistics']['attributes'], string> = { for: 'FOR', agi: 'AGI', sau: 'SAÚ', int: 'INT', sab: 'SAB', per: 'PER' };
 const dragonAgeOrder = ['hatchling', 'young', 'adult', 'old', 'ancient'];
 const localized = (code: string, options: readonly (readonly [string, string])[]) => options.find(([value]) => value === code)?.[1] ?? code;
 
-export function ShadowlordsMonsterSheet({ record, onClose, onEdit, onArchive, onTrash }: Props) {
+export function ShadowlordsMonsterSheet({ record, onClose, onEdit, onArchive, onTrash, onExport }: Props) {
   const document = record.document;
   const [profileId, setProfileId] = useState(document.profiles.find((p) => p.isPrimary)?.id ?? document.profiles[0].id);
   const [imageOpen, setImageOpen] = useState(false);
@@ -28,7 +28,7 @@ export function ShadowlordsMonsterSheet({ record, onClose, onEdit, onArchive, on
   ];
   const variantProfiles = document.profiles.filter((item) => item.id !== profile.id);
   return <div className="monster-sheet-overlay"><article className="monster-sheet" role="dialog" aria-modal="true" aria-labelledby="shadowlords-sheet-title">
-    <header className="monster-sheet-header"><button className="back-link" onClick={onClose}>← Voltar à biblioteca</button><div className="sheet-actions"><button className="secondary-button" onClick={onEdit}>Editar</button><button className="secondary-button" onClick={() => onArchive(!archived)}>{archived ? 'Desarquivar' : 'Arquivar'}</button><button className="danger-button" onClick={onTrash}>Remover</button></div></header>
+    <header className="monster-sheet-header"><button className="back-link" onClick={onClose}>← Voltar à biblioteca</button><div className="sheet-actions"><button className="secondary-button" onClick={onEdit}>Editar</button><button className="secondary-button" onClick={() => onArchive(!archived)}>{archived ? 'Desarquivar' : 'Arquivar'}</button><button className="danger-button" onClick={onTrash}>Remover</button><button className="secondary-button" onClick={onExport}>Exportar</button></div></header>
     <div className="monster-sheet-body shadowlords-sheet-body"><div className="shadowlords-identity"><div><p className="kicker">SHADOWLORDS MINI SYSTEM 3E <span className={archived ? 'sheet-status archived' : 'sheet-status'}>{archived ? 'ARQUIVADO' : 'ATIVO'}</span></p><h1 id="shadowlords-sheet-title">{document.name}</h1>{document.descriptors.length > 0 && <p className="monster-category">{document.descriptors.join(' · ')}</p>}<section className="shadowlords-general-lines">{generalFields.filter(([, value]) => value.trim()).map(([label, value]) => <div key={label}><strong>{label}</strong><span>{value}</span></div>)}</section></div>
         {record.imageDataUrl && <button className="monster-sheet-image" onClick={() => setImageOpen(true)} aria-label="Ampliar imagem"><img src={record.imageDataUrl} alt={`Imagem de ${document.name}`} /><span>Ampliar imagem</span></button>}
       </div>

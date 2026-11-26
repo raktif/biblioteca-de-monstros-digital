@@ -1,39 +1,39 @@
-﻿{
-    "format":  "biblioteca-de-monstros-digital.package",
-    "formatVersion":  1,
-    "kind":  "package-manifest",
-    "packageKind":  "library",
-    "systemCode":  "add2e",
-    "schemaKey":  "add2e.monster",
-    "schemaVersion":  1,
-    "exportedAt":  "2026-11-25T12:00:00Z",
-    "generator":  {
-                      "name":  "Biblioteca de Monstros Digital",
-                      "version":  "0.1.0"
-                  },
-    "counts":  {
-                   "libraries":  1,
-                   "monsters":  1,
-                   "activeMonsters":  1,
-                   "archivedMonsters":  0,
-                   "images":  0,
-                   "files":  2
-               },
-    "totalUncompressedBytes":  1771,
-    "files":  [
-                  {
-                      "path":  "library.json",
-                      "role":  "library-data",
-                      "mediaType":  "application/json",
-                      "size":  253,
-                      "sha256":  "62697a491b25316b255b4880b74b4f67398f9ee2b218cd8c385cee1af9f41885"
-                  },
-                  {
-                      "path":  "monsters/000001--bugbear.monster.json",
-                      "role":  "monster-data",
-                      "mediaType":  "application/json",
-                      "size":  1518,
-                      "sha256":  "073ba8ddec161a758029d23ef7430a0f1dd73dd9331e35a46aa1cef308eab0b2"
-                  }
-              ]
+{
+  "format": "biblioteca-de-monstros-digital.package",
+  "formatVersion": 1,
+  "kind": "package-manifest",
+  "packageKind": "library",
+  "systemCode": "add2e",
+  "schemaKey": "add2e.monster",
+  "schemaVersion": 1,
+  "exportedAt": "2026-11-25T12:00:00Z",
+  "generator": {
+    "name": "Biblioteca de Monstros Digital",
+    "version": "0.1.0"
+  },
+  "counts": {
+    "libraries": 1,
+    "monsters": 1,
+    "activeMonsters": 1,
+    "archivedMonsters": 0,
+    "images": 0,
+    "files": 2
+  },
+  "totalUncompressedBytes": 1804,
+  "files": [
+    {
+      "path": "library.json",
+      "role": "library-data",
+      "mediaType": "application/json",
+      "size": 262,
+      "sha256": "ae5a60543aadc6b888c3af8911b6f95ba4bab2a2c083a08a442fc1cb9f6166f7"
+    },
+    {
+      "path": "monsters/000001--bugbear.monster.json",
+      "role": "monster-data",
+      "mediaType": "application/json",
+      "size": 1542,
+      "sha256": "6def2fc982f10f0849416f91a5383df11ec5944038a9d34723f1c349bcb7c20b"
+    }
+  ]
 }

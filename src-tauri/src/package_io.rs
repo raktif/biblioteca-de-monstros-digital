@@ -427,4 +427,21 @@ mod tests {
         assert_eq!(error.code, "PACKAGE_HASH_MISMATCH");
         fs::remove_file(path).unwrap();
     }
+
+    #[test]
+    fn inspects_all_reference_packages() {
+        let examples: [(&str, &[u8]); 4] = [
+            ("add2e-library-reference.zip", include_bytes!("../../docs/examples/import-export/add2e-library-reference.zip")),
+            ("add2e-monster-reference.zip", include_bytes!("../../docs/examples/import-export/add2e-monster-reference.zip")),
+            ("shadowlords3e-library-reference.zip", include_bytes!("../../docs/examples/import-export/shadowlords3e-library-reference.zip")),
+            ("shadowlords3e-monster-reference.zip", include_bytes!("../../docs/examples/import-export/shadowlords3e-monster-reference.zip")),
+        ];
+        for (name, bytes) in examples {
+            let path = std::env::temp_dir().join(format!("bmd-{name}-{}.zip", uuid::Uuid::new_v4()));
+            fs::write(&path, bytes).unwrap();
+            let package = inspect_zip(&path).unwrap_or_else(|error| panic!("{name}: {} ({})", error.message, error.code));
+            assert!(matches!(package.manifest.package_kind.as_str(), "library" | "monster"));
+            fs::remove_file(path).unwrap();
+        }
+    }
 }

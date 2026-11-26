@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { initializeRuntime, type RuntimeInfo } from '../infrastructure/runtime';
 import {
   createLibrary, deleteLibraryPermanently, listLibraries, listTrashedLibraries, moveLibraryToTrash,
@@ -17,6 +17,7 @@ import { ShadowlordsMonsterSheet } from './ShadowlordsMonsterSheet';
 import { MonsterBrowser } from './MonsterBrowser';
 import { PortableImportWizard } from './PortableImportWizard';
 import type { ImportReport } from '../infrastructure/portable';
+import { exportLibrary, exportMonster } from '../portable/package-export';
 import type { Add2EMonster } from '../generated/add2e-monster';
 import type { ShadowlordsMonster } from '../generated/shadowlords3e-monster';
 import './app.css';
@@ -57,6 +58,7 @@ function App() {
   const [deleteName, setDeleteName] = useState('');
   const [pendingClose, setPendingClose] = useState(false);
   const [portableImportMode, setPortableImportMode] = useState<PortableImportMode | null>(null);
+  const monsterListRequest = useRef(0);
 
   const refresh = useCallback(async () => {
     const [active, removed] = await Promise.all([listLibraries(), listTrashedLibraries()]);
@@ -145,9 +147,16 @@ function App() {
 
   const shownImage = draft.imageDataUrl ?? (editing ? editing.imageDataUrl : null);
 
+  async function refreshMonsterRows(libraryId: string, status: MonsterStatus) {
+    const requestId = ++monsterListRequest.current;
+    const rows = await listMonsters(libraryId, status);
+    if (requestId === monsterListRequest.current) setMonsterRows(rows);
+    return rows;
+  }
+
   async function openLibrary(item: Library) {
-    setSelected(item); setPage('detail'); setMonsterRecord(null); setMonsterEditor(false); setMonsterStatusView('active'); setMonsterError('');
-    try { setMonsterRows(await listMonsters(item.id, 'active')); }
+    setSelected(item); setPage('detail'); setMonsterRows([]); setMonsterRecord(null); setMonsterEditor(false); setMonsterStatusView('active'); setMonsterError('');
+    try { await refreshMonsterRows(item.id, 'active'); }
     catch (reason) { setError(errorMessage(reason)); }
   }
 
@@ -196,11 +205,29 @@ function App() {
     catch (reason) { setError(errorMessage(reason)); }
   }
 
-  function completePortableImport(report: ImportReport) {
+  async function completePortableImport(report: ImportReport) {
     setPortableImportMode(null);
     setNotice(`${report.importedMonsterCount} monstro(s) importado(s)${report.renamedMonsterCount ? `; ${report.renamedMonsterCount} recebeu(ram) nome ajustado` : ''}.`);
-    void refresh();
-    if (selected) void listMonsters(selected.id, monsterStatusView).then(setMonsterRows).catch((reason) => setError(errorMessage(reason)));
+    await refresh();
+    if (report.createdLibraryId) {
+      const importedLibrary = (await listLibraries()).find((library) => library.id === report.createdLibraryId);
+      if (importedLibrary) await openLibrary(importedLibrary);
+    } else if (selected && report.targetLibraryId === selected.id) {
+      await refreshMonsterRows(selected.id, monsterStatusView);
+    }
+  }
+
+  async function exportSelectedLibrary() {
+    if (!selected) return;
+    setError('');
+    try { await exportLibrary(selected.id); setNotice(`Arquivo ZIP de “${selected.name}” preparado para download.`); }
+    catch (reason) { setError(errorMessage(reason)); }
+  }
+
+  async function exportMonsterById(id: string, name: string) {
+    setError('');
+    try { await exportMonster(id); setNotice(`Arquivo ZIP de “${name}” preparado para download.`); }
+    catch (reason) { setError(errorMessage(reason)); }
   }
 
   if (busy && !runtime && !error) return <main className="loading" role="status">Preparando sua biblioteca…</main>;
@@ -230,11 +257,11 @@ function App() {
       </section>}
 
       {page === 'detail' && selected && <section className="page-section">
-        <button className="back-link" onClick={() => { setSelected(null); setPage('libraries'); }}>← Voltar às bibliotecas</button>
+        <button className="back-link" onClick={() => { monsterListRequest.current++; setMonsterRows([]); setSelected(null); setPage('libraries'); }}>← Voltar às bibliotecas</button>
         <div className="detail-banner">{selected.imageDataUrl ? <img src={selected.imageDataUrl} alt="" /> : <span aria-hidden="true">♧</span>}</div>
-        <div className="detail-heading"><div><span className="system-label">{selected.systemName}</span><h1>{selected.name}</h1><p className="subtitle">{selected.activeMonsterCount} monstros ativos · {selected.totalMonsterCount} no total</p></div><div className="detail-actions"><button className="secondary-button portable-action" disabled={readOnly} onClick={() => setPortableImportMode('monster')}><span aria-hidden="true">↧</span> Importar monstro</button><button className="secondary-button portable-action" disabled title="A exportação ZIP será habilitada após a conexão do comando nativo."><span aria-hidden="true">↥</span> Exportar biblioteca</button><button className="secondary-button" disabled={readOnly} onClick={() => beginEdit(selected)}>Editar biblioteca</button><button className="danger-button" disabled={readOnly} onClick={() => void removeLibrary(selected)}>Remover</button></div></div>
-        <div className="monster-list-header"><div className="monster-list-tabs" role="tablist" aria-label="Estado dos monstros">{(['active','archived','trashed'] as const).map((status) => <button key={status} role="tab" aria-selected={monsterStatusView === status} className={monsterStatusView === status ? 'monster-list-tab selected' : 'monster-list-tab'} onClick={async () => { setMonsterStatusView(status); setMonsterRecord(null); setMonsterRows(await listMonsters(selected.id, status)); }}>{status === 'active' ? 'Ativos' : status === 'archived' ? 'Arquivados' : 'Lixeira'}</button>)}</div><div className="monster-header-actions">{monsterStatusView === 'active' && supportsMonsterEditor(selected.systemCode) && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>＋ Novo monstro</button>}</div></div>
-        <MonsterBrowser libraryId={selected.id} rows={monsterRows} status={monsterStatusView} onOpen={(item) => void openMonster(item)} onRestore={(item) => void restoreTrashedMonster(item)} onDelete={(item) => { setMonsterDelete(item); setMonsterDeleteName(''); }} onRemove={(item) => void trashMonster(item)} />
+        <div className="detail-heading"><div><span className="system-label">{selected.systemName}</span><h1>{selected.name}</h1><p className="subtitle">{selected.activeMonsterCount} monstros ativos · {selected.totalMonsterCount} no total</p></div><div className="detail-actions"><button className="secondary-button portable-action" disabled={readOnly} onClick={() => setPortableImportMode('monster')}><span aria-hidden="true">↧</span> Importar monstro</button><button className="secondary-button portable-action" onClick={() => void exportSelectedLibrary()}><span aria-hidden="true">↥</span> Exportar biblioteca</button><button className="secondary-button" disabled={readOnly} onClick={() => beginEdit(selected)}>Editar biblioteca</button><button className="danger-button" disabled={readOnly} onClick={() => void removeLibrary(selected)}>Remover</button></div></div>
+        <div className="monster-list-header"><div className="monster-list-tabs" role="tablist" aria-label="Estado dos monstros">{(['active','archived','trashed'] as const).map((status) => <button key={status} role="tab" aria-selected={monsterStatusView === status} className={monsterStatusView === status ? 'monster-list-tab selected' : 'monster-list-tab'} onClick={async () => { setMonsterStatusView(status); setMonsterRecord(null); try { await refreshMonsterRows(selected.id, status); } catch (reason) { setError(errorMessage(reason)); } }}>{status === 'active' ? 'Ativos' : status === 'archived' ? 'Arquivados' : 'Lixeira'}</button>)}</div><div className="monster-header-actions">{monsterStatusView === 'active' && supportsMonsterEditor(selected.systemCode) && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>＋ Novo monstro</button>}</div></div>
+        <MonsterBrowser libraryId={selected.id} systemCode={selected.systemCode} rows={monsterRows} status={monsterStatusView} onOpen={(item) => void openMonster(item)} onRestore={(item) => void restoreTrashedMonster(item)} onDelete={(item) => { setMonsterDelete(item); setMonsterDeleteName(''); }} onRemove={(item) => void trashMonster(item)} onExport={(item) => void exportMonsterById(item.id, item.name)} />
         {monsterRows.length === 0 && monsterStatusView === 'active' && <button className="primary-button" onClick={() => { setMonsterError(''); setMonsterEditor(null); }}>Cadastrar primeiro monstro</button>}
       </section>}
 
@@ -263,8 +290,8 @@ function App() {
     {portableImportMode && <div className="modal-backdrop"><PortableImportWizard mode={portableImportMode} targetLibraryId={portableImportMode === 'monster' ? selected?.id : undefined} onCancel={() => setPortableImportMode(null)} onCompleted={completePortableImport} /></div>}
 
     {page === 'trash' && selected && <div className="modal-backdrop"><section className="dialog small-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title"><button className="dialog-close" onClick={() => setSelected(null)} aria-label="Fechar">×</button><p className="kicker">AÇÃO IRREVERSÍVEL</p><h2 id="delete-title">Excluir biblioteca?</h2><p>Imagens e dados de <strong>{selected.name}</strong> serão removidos definitivamente. Digite o nome exato para confirmar.</p><label>Nome da biblioteca<input autoFocus value={deleteName} onChange={(event) => setDeleteName(event.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="dialog-actions"><button className="secondary-button" onClick={() => { setSelected(null); setError(''); }}>Cancelar</button><button className="danger-button" disabled={deleteName !== selected.name || busy} onClick={() => void permanentlyDelete(selected)}>Excluir definitivamente</button></div></section></div>}
-    {monsterRecord?.document.systemCode === 'add2e' && selected && <MonsterSheet record={{ ...monsterRecord, document: monsterRecord.document as Add2EMonster }} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} />}
-    {monsterRecord?.document.systemCode === 'shadowlords3e' && selected && <ShadowlordsMonsterSheet record={{ ...monsterRecord, document: monsterRecord.document as ShadowlordsMonster }} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} />}
+    {monsterRecord?.document.systemCode === 'add2e' && selected && <MonsterSheet record={{ ...monsterRecord, document: monsterRecord.document as Add2EMonster }} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} onExport={() => void exportMonsterById(monsterRecord.document.id, monsterRecord.document.name)} />}
+    {monsterRecord?.document.systemCode === 'shadowlords3e' && selected && <ShadowlordsMonsterSheet record={{ ...monsterRecord, document: monsterRecord.document as ShadowlordsMonster }} onClose={() => setMonsterRecord(null)} onEdit={() => { setMonsterError(''); setMonsterEditor(monsterRecord); }} onArchive={(archived) => void archiveMonster(archived)} onTrash={() => { const item = monsterRows.find((row) => row.id === monsterRecord.document.id); if (item) void trashMonster(item); }} onExport={() => void exportMonsterById(monsterRecord.document.id, monsterRecord.document.name)} />}
     {monsterEditor !== false && selected && (monsterEditor?.document.systemCode === 'add2e' || monsterEditor === null && selected.systemCode === 'add2e') && <MonsterForm key={monsterEditor?.document.id ?? `new-${selected.id}`} libraryId={selected.id} initial={monsterEditor?.document.systemCode === 'add2e' ? monsterEditor.document : undefined} initialImage={monsterEditor?.imageDataUrl} saving={monsterSaving} serverError={monsterError} onCancel={() => { setMonsterEditor(false); setMonsterError(''); }} onSave={saveMonster} />}
     {monsterEditor !== false && selected && (monsterEditor?.document.systemCode === 'shadowlords3e' || monsterEditor === null && selected.systemCode === 'shadowlords3e') && <ShadowlordsMonsterForm key={monsterEditor?.document.id ?? `new-${selected.id}`} libraryId={selected.id} initial={monsterEditor?.document.systemCode === 'shadowlords3e' ? monsterEditor.document : undefined} initialImage={monsterEditor?.imageDataUrl} saving={monsterSaving} serverError={monsterError} onCancel={() => { setMonsterEditor(false); setMonsterError(''); }} onSave={saveMonster} />}
     {monsterDelete && <div className="modal-backdrop"><section className="dialog small-dialog" role="alertdialog" aria-modal="true" aria-labelledby="monster-delete-title"><button className="dialog-close" onClick={() => setMonsterDelete(null)} aria-label="Fechar">×</button><p className="kicker">AÇÃO IRREVERSÍVEL</p><h2 id="monster-delete-title">Excluir monstro?</h2><p>Os dados e a imagem de <strong>{monsterDelete.name}</strong> serão removidos definitivamente. Digite o nome exato para confirmar.</p><label>Nome do monstro<input autoFocus value={monsterDeleteName} onChange={(event) => setMonsterDeleteName(event.target.value)} /></label><div className="dialog-actions"><button className="secondary-button" onClick={() => setMonsterDelete(null)}>Cancelar</button><button className="danger-button" disabled={monsterDeleteName !== monsterDelete.name} onClick={() => void permanentlyDeleteMonster(monsterDelete)}>Excluir definitivamente</button></div></section></div>}

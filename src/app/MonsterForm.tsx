@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import type { Add2EMonster, AuxiliaryTable, Climate, Profile, Source, Terrain } from '../generated/add2e-monster';
 import { validateAdd2eMonster } from '../domain/validation';
+import { add2eActivityOptions as activityOptions, add2eTerrainOptions as terrainOptions } from '../domain/add2e-vocabularies';
 import { LimitedMarkdown } from './LimitedMarkdown';
 
 type Props = {
@@ -15,8 +16,6 @@ type Props = {
 
 const kinds = [['primary', 'Principal'], ['variant', 'Variante'], ['leader', 'Líder'], ['chief', 'Chefe'], ['shaman', 'Xamã'], ['form', 'Forma'], ['caste', 'Casta'], ['age', 'Categoria etária'], ['other', 'Outro']] as const;
 const climateOptions: [Climate['code'], string][] = [['arctic','Ártico'],['subarctic','Subártico'],['cold','Frio'],['temperate','Temperado'],['subtropical','Subtropical'],['tropical','Tropical'],['hot','Quente'],['arid','Árido'],['any','Qualquer'],['extraplanar','Extraplanar'],['special','Especial'],['other','Outro']];
-const terrainOptions: [Terrain['code'], string][] = [['underground','Subterrâneo'],['plains','Planícies'],['forest','Floresta'],['jungle','Selva'],['hills','Colinas'],['mountains','Montanhas'],['swamp','Pântano'],['desert','Deserto'],['coast','Costa'],['freshwater','Água doce'],['ocean','Oceano'],['aquatic','Aquático'],['urban','Urbano'],['ruins','Ruínas'],['wilderness','Ermo'],['aerial','Aéreo'],['space','Espaço'],['extraplanar','Extraplanar'],['any','Qualquer'],['special','Especial'],['other','Outro']];
-const activityOptions: [Profile['activityPeriods'][number]['code'], string][] = [['day','Dia'],['night','Noite'],['twilight','Crepúsculo'],['dawn','Alvorada'],['dusk','Anoitecer'],['any','Qualquer'],['continuous','Contínuo'],['seasonal','Sazonal'],['special','Especial'],['other','Outro']];
 const frequencies = [['common','Comum'],['uncommon','Incomum'],['rare','Raro'],['very_rare','Muito raro'],['unique','Único'],['variable','Variável'],['other','Outro']] as const;
 const emptyPsionics = () => ({ level: '', disciplinesSciencesDevotions: '', attackDefenseModes: '', powerScore: '', psps: '', powers: '' });
 
