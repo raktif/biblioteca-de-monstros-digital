@@ -45,10 +45,15 @@ for (const group of groups) {
     schemaIds[exportName] = schema.$id;
   }
 
-  const generated = standaloneCode(ajv, schemaIds).replace(
-    /const (func\d+) = require\("([^"]+)"\)\.default;/g,
-    'import $1 from "$2";',
-  );
+  const generated = standaloneCode(ajv, schemaIds)
+    .replace(
+      /const (func\d+) = require\("ajv\/dist\/runtime\/ucs2length"\)\.default;/g,
+      'import $1 from "./ajv-runtime-ucs2length.js";',
+    )
+    .replace(
+      /const (func\d+) = require\("ajv\/dist\/runtime\/equal"\)\.default;/g,
+      'import $1 from "./ajv-runtime-equal.js";',
+    );
   const declarations = [
     "import type { ValidateFunction } from 'ajv';",
     ...group.schemas.map(([exportName]) => `export declare const ${exportName}: ValidateFunction;`),
