@@ -24,7 +24,7 @@ function profileFields(profile: Profile): SheetField[] {
     ['Frequência', profile.frequency.code === 'other' ? profile.frequency.other : profile.frequency.code],
     ['Organização', profile.organization],
     ['Período de atividade', profile.activityPeriods.map((item) => item.other || item.code).join(', ')],
-    ['Dieta', profile.diet], ['Tesouro', profile.treasure], ['Quantidade/Encontro', profile.quantityEncounter],
+    ['Dieta', profile.diet], ['Quantidade/Encontro', profile.quantityEncounter], ['Tesouro', profile.treasure],
     ['Inteligência', stats.intelligence], ['Tendência', stats.alignment], ['Classe de Armadura', stats.armorClass],
     ['Movimento', stats.movement], ['Dados de Vida', stats.hitDice], ['TAC0', stats.thac0],
     ['Ataques por rodada', stats.attacksPerRound], ['Dano/Ataque', stats.damagePerAttack],
@@ -34,8 +34,7 @@ function profileFields(profile: Profile): SheetField[] {
   ]);
 }
 
-function ProfileValues({ profile }: { profile: Profile }) {
-  const fields = profileFields(profile);
+function ProfileValues({ fields }: { fields: SheetField[] }) {
   return <dl className="monster-stat-grid">{fields.map(([label, value]) => <div className="monster-stat" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
 }
 
@@ -69,13 +68,17 @@ export function MonsterSheet({ record, onClose, onEdit, onArchive, onTrash, onEx
   const [imageOpen, setImageOpen] = useState(false);
   const profile = document.profiles.find((item) => item.id === profileId) ?? document.profiles.find((item) => item.isPrimary) ?? document.profiles[0];
   const archived = document.status === 'archived';
+  const fields = profileFields(profile);
+  const generalLabels = ['Clima', 'Terreno', 'Frequência', 'Organização', 'Período de atividade', 'Dieta', 'Quantidade/Encontro', 'Tesouro'];
+  const generalFields = fields.filter(([label]) => generalLabels.includes(label));
+  const statisticsFields = fields.filter(([label]) => !generalLabels.includes(label));
 
   return <div className="monster-sheet-overlay"><article className="monster-sheet" role="dialog" aria-modal="true" aria-labelledby="monster-sheet-title">
     <header className="monster-sheet-header"><button className="back-link" onClick={onClose}>← Voltar à biblioteca</button><div className="sheet-actions"><button className="secondary-button" onClick={onEdit}>Editar</button><button className="secondary-button" onClick={() => onArchive(!archived)}>{archived ? 'Desarquivar' : 'Arquivar'}</button><button className="danger-button" onClick={onTrash}>Remover</button><button className="secondary-button" onClick={onExport}>Exportar</button></div></header>
-    <div className="monster-sheet-body"><p className="kicker">AD&D 2ª EDIÇÃO <span className={archived ? 'sheet-status archived' : 'sheet-status'}>{archived ? 'ARQUIVADO' : 'ATIVO'}</span></p><h1 id="monster-sheet-title">{document.name}</h1>{document.editorialCategory && <p className="monster-category">{document.editorialCategory}</p>}
-      {record.imageDataUrl && <button className="monster-sheet-image" onClick={() => setImageOpen(true)} aria-label="Ampliar imagem do monstro"><img src={record.imageDataUrl} alt={`Imagem de ${document.name}`} /><span>Ampliar imagem</span></button>}
+    <div className="monster-sheet-body add2e-sheet-body"><div className={record.imageDataUrl ? 'add2e-identity has-image' : 'add2e-identity'}><div><p className="kicker">AD&D 2ª EDIÇÃO <span className={archived ? 'sheet-status archived' : 'sheet-status'}>{archived ? 'ARQUIVADO' : 'ATIVO'}</span></p><h1 id="monster-sheet-title">{document.name}</h1>{document.editorialCategory && <p className="monster-category">{document.editorialCategory}</p>}
+      <dl className="add2e-general-lines">{generalFields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></div>{record.imageDataUrl && <button className="monster-sheet-image" onClick={() => setImageOpen(true)} aria-label="Ampliar imagem do monstro"><img src={record.imageDataUrl} alt={`Imagem de ${document.name}`} /><span>Ampliar imagem</span></button>}</div>
       {document.profiles.length > 1 && <><div className="profile-switcher" role="tablist" aria-label="Selecionar perfil">{document.profiles.map((item) => <button role="tab" aria-selected={item.id === profile.id} className={item.id === profile.id ? 'profile-tab selected' : 'profile-tab'} key={item.id} onClick={() => setProfileId(item.id)}>{item.label}{item.isPrimary ? ' ★' : ''}</button>)}</div><div className="profile-compare-wide"><ProfileComparison profiles={document.profiles} /></div></>}
-      <section className="sheet-section"><h2>Matriz de estatísticas · {profile.label}</h2><ProfileValues profile={profile} />{profile.profileNotes && <div className="sheet-profile-notes"><h3>Observações do perfil</h3><LimitedMarkdown source={profile.profileNotes} /></div>}</section>
+      <section className="sheet-section"><h2>Matriz de estatísticas · {profile.label}</h2><ProfileValues fields={statisticsFields} />{profile.profileNotes && <div className="sheet-profile-notes"><h3>Observações do perfil</h3><LimitedMarkdown source={profile.profileNotes} /></div>}</section>
       {profile.statistics.psionics && <section className="sheet-section"><h2>Psiônicos</h2><dl className="monster-stat-grid">{[["Nível",profile.statistics.psionics.level],["Dis/Cien/Dev",profile.statistics.psionics.disciplinesSciencesDevotions],["Ataque/Defesa",profile.statistics.psionics.attackDefenseModes],["Número de poder",profile.statistics.psionics.powerScore],["PPPs",profile.statistics.psionics.psps]].filter(([,value]) => value).map(([label,value]) => <div className="monster-stat" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><Narrative title="Poderes por disciplina" value={profile.statistics.psionics.powers} /></section>}
       {document.auxiliaryTables.map((table) => <section className="sheet-section" key={table.id}><h2>{table.title}</h2><div className="sheet-table-scroll"><table><thead><tr>{table.columns.map((column,index) => <th key={index} style={{ textAlign: column.alignment }}>{column.header}</th>)}</tr></thead><tbody>{table.rows.map((row,rowIndex) => <tr key={rowIndex}>{row.map((cell,cellIndex) => <td key={cellIndex} style={{ textAlign: table.columns[cellIndex]?.alignment ?? 'left' }}>{cell}</td>)}</tr>)}</tbody></table></div>{table.notes && <p className="sheet-table-notes">{table.notes}</p>}</section>)}
       <Narrative title="Descrição" value={document.narratives.description} /><Narrative title="Combate" value={document.narratives.combat} /><Narrative title="Habitat/Sociedade" value={document.narratives.habitatSociety} /><Narrative title="Ecologia" value={document.narratives.ecology} /><Narrative title="Variações" value={document.narratives.variations} /><Narrative title="Notas adicionais" value={document.narratives.additionalNotes} />

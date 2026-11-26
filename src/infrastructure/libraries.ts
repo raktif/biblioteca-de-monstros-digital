@@ -8,6 +8,8 @@ export interface Library {
   systemName: string;
   name: string;
   imageDataUrl: string | null;
+  cropX: number;
+  cropY: number;
   activeMonsterCount: number;
   totalMonsterCount: number;
   createdAt: string;
@@ -21,6 +23,8 @@ interface LibraryInput {
   name: string;
   systemCode: SystemCode;
   imageDataUrl?: string | null;
+  cropX?: number;
+  cropY?: number;
 }
 
 const STORAGE_KEY = 'bmd.stage2.libraries';
@@ -29,7 +33,7 @@ let memoryLibraries: Library[] = [];
 function readBrowserLibraries(): Library[] {
   try {
     const value = globalThis.localStorage?.getItem(STORAGE_KEY);
-    return value ? (JSON.parse(value) as Library[]) : memoryLibraries;
+    return value ? (JSON.parse(value) as Library[]).map((item) => ({ ...item, cropX: item.cropX ?? 50, cropY: item.cropY ?? 50 })) : memoryLibraries;
   } catch {
     return memoryLibraries;
   }
@@ -62,7 +66,7 @@ function browserCreate(input: LibraryInput): Library {
   const now = new Date().toISOString();
   const library: Library = {
     id: crypto.randomUUID(), systemCode: input.systemCode, systemName: browserSystemName(input.systemCode), name,
-    imageDataUrl: input.imageDataUrl ?? null, activeMonsterCount: 0, totalMonsterCount: 0,
+    imageDataUrl: input.imageDataUrl ?? null, cropX: input.cropX ?? 50, cropY: input.cropY ?? 50, activeMonsterCount: 0, totalMonsterCount: 0,
     createdAt: now, updatedAt: now, deletedAt: null, purgeAfter: null, rowVersion: 1,
   };
   writeBrowserLibraries([...readBrowserLibraries(), library]);
@@ -84,20 +88,20 @@ export async function listTrashedLibraries(): Promise<Library[]> {
 
 export async function createLibrary(input: LibraryInput): Promise<Library> {
   return isTauri()
-    ? invoke<Library>('library_create', { name: input.name, systemCode: input.systemCode, imageDataUrl: input.imageDataUrl ?? null })
+    ? invoke<Library>('library_create', { name: input.name, systemCode: input.systemCode, imageDataUrl: input.imageDataUrl ?? null, cropX: input.cropX ?? 50, cropY: input.cropY ?? 50 })
     : browserCreate(input);
 }
 
 export async function updateLibrary(id: string, input: LibraryInput, rowVersion: number, removeImage: boolean): Promise<Library> {
   if (isTauri()) return invoke<Library>('library_update', {
     id, name: input.name, systemCode: input.systemCode, imageDataUrl: input.imageDataUrl ?? null,
-    removeImage, expectedRowVersion: rowVersion,
+    removeImage, expectedRowVersion: rowVersion, cropX: input.cropX ?? 50, cropY: input.cropY ?? 50,
   });
   const current = readBrowserLibraries().find((item) => item.id === id);
   if (!current) throw { code: 'LIBRARY_NOT_FOUND', message: 'Biblioteca não encontrada.' };
   if (current.rowVersion !== rowVersion) throw { code: 'CONFLICT_ROW_VERSION', message: 'A biblioteca foi alterada. Recarregue os dados e tente novamente.' };
   if (current.totalMonsterCount && current.systemCode !== input.systemCode) throw { code: 'LIBRARY_SYSTEM_LOCKED', message: 'O sistema não pode ser alterado depois que a biblioteca recebeu monstros.' };
-  const updated = { ...current, name: input.name.trim(), systemCode: input.systemCode, systemName: browserSystemName(input.systemCode), imageDataUrl: removeImage ? null : input.imageDataUrl ?? current.imageDataUrl, updatedAt: new Date().toISOString(), rowVersion: rowVersion + 1 };
+  const updated = { ...current, name: input.name.trim(), systemCode: input.systemCode, systemName: browserSystemName(input.systemCode), imageDataUrl: removeImage ? null : input.imageDataUrl ?? current.imageDataUrl, cropX: removeImage || input.imageDataUrl ? 50 : input.cropX ?? current.cropX, cropY: removeImage || input.imageDataUrl ? 50 : input.cropY ?? current.cropY, updatedAt: new Date().toISOString(), rowVersion: rowVersion + 1 };
   writeBrowserLibraries(readBrowserLibraries().map((item) => item.id === id ? updated : item));
   return updated;
 }

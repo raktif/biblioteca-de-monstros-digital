@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createLibrary, listLibraries } from '../../src/infrastructure/libraries.ts';
 import { listMonsters } from '../../src/infrastructure/monsters.ts';
-import { executePortableImport, inspectPortableFile } from '../../src/portable/package-import.ts';
+import { cancelPortableImport, executePortableImport, executePortableImportBatch, inspectPortableFile } from '../../src/portable/package-import.ts';
 import { buildLibraryPackage, buildMonsterPackage } from '../../src/portable/package-export.ts';
 
 const examples = path.resolve('docs/examples/import-export');
@@ -52,6 +52,42 @@ describe('importação dos pacotes de exemplo', () => {
     expect((await listMonsters(library.id, 'archived')).map((monster) => monster.name)).toEqual([]);
     expect(await listMonsters(peer.id, 'all')).toEqual([]);
     expect(await listMonsters(otherSystem.id, 'all')).toEqual([]);
+  });
+
+  it('reverte todos os monstros se um pacote do lote expirar durante a gravação', async () => {
+    const library = await createLibrary({ name: `Destino lote ${crypto.randomUUID()}`, systemCode: 'add2e' });
+    const first = await inspectPortableFile(exampleFile('add2e-monster-reference.zip'), library.id);
+    const second = await inspectPortableFile(exampleFile('add2e-monster-reference.zip'), library.id);
+    cancelPortableImport(second.planId);
+    await expect(executePortableImportBatch([
+      { planId: first.planId, targetLibraryId: library.id },
+      { planId: second.planId, targetLibraryId: library.id },
+    ], 'monster')).rejects.toThrow(/expirou/);
+    expect(await listMonsters(library.id, 'all')).toEqual([]);
+  });
+
+  it('resolve colisões de nomes entre pacotes do mesmo lote', async () => {
+    const library = await createLibrary({ name: `Destino nomes lote ${crypto.randomUUID()}`, systemCode: 'add2e' });
+    const first = await inspectPortableFile(exampleFile('add2e-monster-reference.zip'), library.id);
+    const second = await inspectPortableFile(exampleFile('add2e-monster-reference.zip'), library.id);
+    const report = await executePortableImportBatch([
+      { planId: first.planId, targetLibraryId: library.id },
+      { planId: second.planId, targetLibraryId: library.id },
+    ], 'monster');
+    expect(report.importedMonsterCount).toBe(2);
+    expect((await listMonsters(library.id, 'all')).map((monster) => monster.name).sort()).toEqual(['Bugbear', 'Bugbear - Importado'].sort());
+  });
+
+  it('reverte bibliotecas já criadas se um pacote do lote falhar', async () => {
+    const before = new Set((await listLibraries()).map((item) => item.id));
+    const first = await inspectPortableFile(exampleFile('add2e-library-reference.zip'));
+    const second = await inspectPortableFile(exampleFile('add2e-library-reference.zip'));
+    cancelPortableImport(second.planId);
+    await expect(executePortableImportBatch([
+      { planId: first.planId, createLibrary: true },
+      { planId: second.planId, createLibrary: true },
+    ], 'library')).rejects.toThrow(/expirou/);
+    expect((await listLibraries()).filter((item) => !before.has(item.id))).toEqual([]);
   });
 
   it('gera ZIPs de exportação válidos para biblioteca e monstro', async () => {

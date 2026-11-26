@@ -24,6 +24,8 @@ pub struct LibraryDto {
     pub system_name: String,
     pub name: String,
     pub image_data_url: Option<String>,
+    pub crop_x: f64,
+    pub crop_y: f64,
     pub active_monster_count: i64,
     pub total_monster_count: i64,
     pub created_at: String,
@@ -40,6 +42,8 @@ struct LibraryRow {
     system_name: String,
     name: String,
     image_path: Option<String>,
+    crop_x: f64,
+    crop_y: f64,
     active_monster_count: i64,
     total_monster_count: i64,
     created_at: String,
@@ -50,7 +54,7 @@ struct LibraryRow {
 }
 
 const LIBRARY_SELECT: &str = "
-    SELECT l.id, l.system_code, s.display_name AS system_name, l.name, l.image_path,
+    SELECT l.id, l.system_code, s.display_name AS system_name, l.name, l.image_path, l.crop_x, l.crop_y,
            (SELECT COUNT(*) FROM monsters m WHERE m.library_id = l.id AND m.status = 'active') AS active_monster_count,
            (SELECT COUNT(*) FROM monsters m WHERE m.library_id = l.id) AS total_monster_count,
            l.created_at, l.updated_at, l.deleted_at, l.purge_after, l.row_version
@@ -104,7 +108,10 @@ pub async fn library_create(
     name: String,
     system_code: String,
     image_data_url: Option<String>,
+    crop_x: f64,
+    crop_y: f64,
 ) -> AppResult<LibraryDto> {
+    validate_crop(crop_x, crop_y)?;
     let name = validate_name(name)?;
     let pool = state.pool().await?;
     validate_system(&pool, &system_code).await?;
@@ -123,7 +130,7 @@ pub async fn library_create(
 
     let mut transaction = pool.begin().await?;
     let insert = sqlx::query(
-        "INSERT INTO libraries (id, system_code, name, sort_name, image_path, image_hash, image_width, image_height, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO libraries (id, system_code, name, sort_name, image_path, image_hash, image_width, image_height, crop_x, crop_y, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&system_code)
@@ -133,6 +140,8 @@ pub async fn library_create(
     .bind(image.as_ref().map(|image| image.sha256.as_str()))
     .bind(image.as_ref().map(|image| i64::from(image.width)))
     .bind(image.as_ref().map(|image| i64::from(image.height)))
+    .bind(crop_x)
+    .bind(crop_y)
     .bind(&now)
     .bind(&now)
     .execute(&mut *transaction)
@@ -176,7 +185,10 @@ pub async fn library_update(
     image_data_url: Option<String>,
     remove_image: bool,
     expected_row_version: i64,
+    crop_x: f64,
+    crop_y: f64,
 ) -> AppResult<LibraryDto> {
+    validate_crop(crop_x, crop_y)?;
     if remove_image && image_data_url.is_some() {
         return Err(AppError::new(
             "INVALID_IMAGE_OPERATION",
@@ -215,6 +227,7 @@ pub async fn library_update(
         .as_deref()
         .map(NormalizedLibraryImage::from_data_url)
         .transpose()?;
+    let crop_was_reset = remove_image || image.is_some();
     let should_change_image = image.is_some() || (remove_image && current.2.is_some());
     let mut file_change = if should_change_image {
         Some(StagedImageChange::stage(
@@ -259,7 +272,7 @@ pub async fn library_update(
 
     let mut transaction = pool.begin().await?;
     let update = sqlx::query(
-        "UPDATE libraries SET system_code = ?, name = ?, sort_name = ?, image_path = ?, image_hash = ?, image_width = ?, image_height = ?, updated_at = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ? AND deleted_at IS NULL",
+        "UPDATE libraries SET system_code = ?, name = ?, sort_name = ?, image_path = ?, image_hash = ?, image_width = ?, image_height = ?, crop_x = ?, crop_y = ?, updated_at = ?, row_version = row_version + 1 WHERE id = ? AND row_version = ? AND deleted_at IS NULL",
     )
     .bind(&system_code)
     .bind(&name)
@@ -268,6 +281,8 @@ pub async fn library_update(
     .bind(image_hash)
     .bind(image_width)
     .bind(image_height)
+    .bind(if crop_was_reset { 50.0 } else { crop_x })
+    .bind(if crop_was_reset { 50.0 } else { crop_y })
     .bind(utc_now()?)
     .bind(&id)
     .bind(expected_row_version)
@@ -588,10 +603,7 @@ async fn library_get_by_id(
 
 fn to_dto(row: LibraryRow, app_data_dir: &Path) -> AppResult<LibraryDto> {
     let image_data_url = row.image_path.as_deref().and_then(|relative_path| {
-        let thumbnail_path = relative_path
-            .strip_suffix("cover.webp")
-            .map(|prefix| format!("{prefix}thumb.webp"))?;
-        let path = safe_app_path(app_data_dir, &thumbnail_path)?;
+        let path = safe_app_path(app_data_dir, relative_path)?;
         match fs::read(path) {
             Ok(bytes) => Some(format!("data:image/webp;base64,{}", STANDARD.encode(bytes))),
             Err(error) => {
@@ -610,6 +622,8 @@ fn to_dto(row: LibraryRow, app_data_dir: &Path) -> AppResult<LibraryDto> {
         system_name: row.system_name,
         name: row.name,
         image_data_url,
+        crop_x: row.crop_x,
+        crop_y: row.crop_y,
         active_monster_count: row.active_monster_count,
         total_monster_count: row.total_monster_count,
         created_at: row.created_at,
@@ -618,6 +632,20 @@ fn to_dto(row: LibraryRow, app_data_dir: &Path) -> AppResult<LibraryDto> {
         purge_after: row.purge_after,
         row_version: row.row_version,
     })
+}
+
+fn validate_crop(crop_x: f64, crop_y: f64) -> AppResult<()> {
+    if !crop_x.is_finite()
+        || !crop_y.is_finite()
+        || !(0.0..=100.0).contains(&crop_x)
+        || !(0.0..=100.0).contains(&crop_y)
+    {
+        return Err(AppError::new(
+            "INVALID_IMAGE_CROP",
+            "A posição do recorte da capa é inválida.",
+        ));
+    }
+    Ok(())
 }
 
 async fn validate_system(pool: &SqlitePool, system_code: &str) -> AppResult<()> {
@@ -695,7 +723,14 @@ async fn conflict_or_not_found(pool: &SqlitePool, id: &str) -> AppResult<AppErro
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_sort_name, validate_name};
+    use std::{
+        fs,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    use super::{LibraryRow, normalize_sort_name, to_dto, validate_name};
 
     #[test]
     fn library_name_trims_and_enforces_character_count() {
@@ -703,6 +738,48 @@ mod tests {
         assert!(validate_name("   ".into()).is_err());
         assert!(validate_name("x".repeat(121)).is_err());
         assert!(validate_name("🧌".repeat(120)).is_ok());
+    }
+
+    #[test]
+    fn library_cover_dto_uses_the_full_cover_not_the_square_thumbnail() {
+        let root = std::env::temp_dir().join(format!(
+            "bmd-library-cover-test-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos(),
+        ));
+        let image_dir = root.join("images/libraries/library-id");
+        fs::create_dir_all(&image_dir).unwrap();
+        fs::write(image_dir.join("cover.webp"), b"full-cover").unwrap();
+        fs::write(image_dir.join("thumb.webp"), b"square-thumbnail").unwrap();
+        let row = LibraryRow {
+            id: "library-id".into(),
+            system_code: "add2e".into(),
+            system_name: "AD&D".into(),
+            name: "Teste".into(),
+            image_path: Some("images/libraries/library-id/cover.webp".into()),
+            crop_x: 20.0,
+            crop_y: 80.0,
+            active_monster_count: 0,
+            total_monster_count: 0,
+            created_at: "2026-01-01T00:00:00Z".into(),
+            updated_at: "2026-01-01T00:00:00Z".into(),
+            deleted_at: None,
+            purge_after: None,
+            row_version: 1,
+        };
+
+        let dto = to_dto(row, &root).unwrap();
+        assert_eq!(
+            dto.image_data_url,
+            Some(format!(
+                "data:image/webp;base64,{}",
+                STANDARD.encode(b"full-cover")
+            ))
+        );
+        assert_eq!((dto.crop_x, dto.crop_y), (20.0, 80.0));
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

@@ -1,6 +1,6 @@
 import { unzipSync } from 'fflate';
 import { createLibrary, deleteLibraryPermanently, listLibraries, moveLibraryToTrash, type Library } from '../infrastructure/libraries';
-import { createMonster, deleteMonsterPermanently, listMonsters, moveMonsterToTrash, setMonsterArchived, type MonsterDocument, type MonsterRecord } from '../infrastructure/monsters';
+import { createMonster, deleteMonsterPermanently, getMonster, listMonsters, moveMonsterToTrash, setMonsterArchived, type MonsterDocument, type MonsterRecord } from '../infrastructure/monsters';
 import type { ImportInspection, ImportReport } from '../infrastructure/portable';
 import { mapPortableMonster } from './import-mappers';
 import { validatePackageInventory, type PackageEntry } from './package-security';
@@ -202,6 +202,7 @@ export async function executePortableImport(options: { planId: string; targetLib
       createdLibraryId: createdLibrary?.id ?? null,
       targetLibraryId: libraryId,
       openedMonsterId: createdMonsters[0]?.document.id ?? null,
+      importedMonsterIds: createdMonsters.map((record) => record.document.id),
       warnings: [],
     };
     reports.set(report.operationId, report);
@@ -225,6 +226,77 @@ export async function executePortableImport(options: { planId: string; targetLib
     if (cleanupErrors.length) throw new Error(`${detail}\nNão foi possível desfazer estes registros: ${cleanupErrors.join(', ')}.`);
     throw error;
   }
+}
+
+export async function rollbackPortableImports(batch: ImportReport[]): Promise<void> {
+  const errors: string[] = [];
+  for (const report of [...batch].reverse()) {
+    if (report.createdLibraryId) {
+      const library = (await listLibraries()).find((item) => item.id === report.createdLibraryId);
+      if (!library) continue;
+      try { await moveLibraryToTrash(library); await deleteLibraryPermanently(library.id, library.name); }
+      catch { errors.push(library.name); }
+      continue;
+    }
+    for (const id of [...(report.importedMonsterIds ?? (report.openedMonsterId ? [report.openedMonsterId] : []))].reverse()) {
+      try {
+        const record = await getMonster(id);
+        await moveMonsterToTrash(id, record.document.rowVersion ?? 1);
+        await deleteMonsterPermanently(id, record.document.name);
+      } catch { errors.push(id); }
+    }
+  }
+  if (errors.length) throw new Error(`A importação falhou e não foi possível desfazer todos os registros: ${errors.join(', ')}.`);
+}
+
+export async function executePortableImportBatch(items: Array<{ planId: string; targetLibraryId?: string; createLibrary?: boolean }>, expectedKind: 'library' | 'monster'): Promise<ImportReport> {
+  if (!items.length) throw new Error('Selecione pelo menos um pacote para importar.');
+  const batchPlans = items.map((item) => {
+    const plan = plans.get(item.planId);
+    if (!plan) throw new Error('Um pacote expirou. Valide novamente o lote antes de importar.');
+    if (plan.manifest.packageKind !== expectedKind) throw new Error(`Um pacote é do tipo ${plan.manifest.packageKind}; remova-o ou use o fluxo correspondente.`);
+    return { item, plan };
+  });
+  if (expectedKind === 'library') {
+    const reserved = (await listLibraries()).map((library) => library.name);
+    for (const { plan } of batchPlans) {
+      if (!plan.library) throw new Error('Um pacote de biblioteca está incompleto. Valide novamente o lote.');
+      plan.finalLibraryName = resolveImportedName(plan.library.library.name, reserved);
+      reserved.push(plan.finalLibraryName);
+    }
+  } else {
+    const reservedByLibrary = new Map<string, string[]>();
+    for (const { item, plan } of batchPlans) {
+      const libraryId = item.targetLibraryId;
+      if (!libraryId) throw new Error('Selecione uma biblioteca de destino para importar os monstros.');
+      if (!reservedByLibrary.has(libraryId)) reservedByLibrary.set(libraryId, (await listMonsters(libraryId, 'all')).map((monster) => monster.name));
+      const reserved = reservedByLibrary.get(libraryId)!;
+      for (const monster of plan.monsters) {
+        monster.finalName = resolveImportedName(monster.sourceName, reserved);
+        reserved.push(monster.finalName);
+      }
+    }
+  }
+  const completed: ImportReport[] = [];
+  try {
+    for (const item of items) completed.push(await executePortableImport(item, expectedKind));
+  } catch (error) {
+    try { await rollbackPortableImports(completed); }
+    catch (rollbackError) {
+      const detail = rollbackError instanceof Error ? rollbackError.message : 'Não foi possível reverter o lote.';
+      throw new Error(`${error instanceof Error ? error.message : 'A importação falhou.'} ${detail}`);
+    }
+    throw error;
+  }
+  const first = completed[0];
+  return {
+    ...first, operationId: crypto.randomUUID(),
+    importedMonsterCount: completed.reduce((sum, report) => sum + report.importedMonsterCount, 0),
+    renamedMonsterCount: completed.reduce((sum, report) => sum + report.renamedMonsterCount, 0),
+    warningCount: completed.reduce((sum, report) => sum + report.warningCount, 0),
+    importedMonsterIds: completed.flatMap((report) => report.importedMonsterIds ?? []),
+    warnings: completed.flatMap((report) => report.warnings),
+  };
 }
 
 export function getPortableImportReport(operationId: string): ImportReport | null { return reports.get(operationId) ?? null; }
