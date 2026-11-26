@@ -40,7 +40,7 @@ async function sha256(bytes: Uint8Array): Promise<string> {
 
 async function packageBytes(kind: 'library' | 'monster', systemCode: Library['systemCode'], entries: FileEntry[], monsters: MonsterRecord[], libraryCount: number): Promise<Uint8Array> {
   const files = await Promise.all(entries.map(async (entry) => ({ path: entry.path, role: entry.role, mediaType: entry.mediaType, size: entry.bytes.length, sha256: await sha256(entry.bytes) })));
-  const manifest = buildManifest({ packageKind: kind, systemCode, schemaKey: `${systemCode}.monster`, schemaVersion: 1, exportedAt: new Date().toISOString(), generatorVersion: '0.1.0', libraries: libraryCount, monsters: monsters.length, activeMonsters: monsters.filter((item) => item.document.status === 'active').length, archivedMonsters: monsters.filter((item) => item.document.status === 'archived').length, images: entries.filter((item) => item.role.endsWith('-image')).length, files });
+  const manifest = buildManifest({ packageKind: kind, systemCode, schemaKey: `${systemCode}.monster`, schemaVersion: 1, exportedAt: new Date().toISOString(), generatorVersion: '1.0.0', libraries: libraryCount, monsters: monsters.length, activeMonsters: monsters.filter((item) => item.document.status === 'active').length, archivedMonsters: monsters.filter((item) => item.document.status === 'archived').length, images: entries.filter((item) => item.role.endsWith('-image')).length, files });
   const zipFiles: Record<string, Uint8Array> = { 'manifest.json': encodeJson(manifest) };
   for (const entry of entries) zipFiles[entry.path] = entry.bytes;
   return zipSync(zipFiles, { level: 6 });

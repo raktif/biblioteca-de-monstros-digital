@@ -1,6 +1,6 @@
 [package]
 name = "biblioteca-de-monstros-digital"
-version = "0.1.0"
+version = "1.0.0"
 description = "Biblioteca local de fichas de monstros para AD&D 2e e Shadowlords 3E"
 authors = ["Biblioteca de Monstros Digital"]
 edition = "2024"
