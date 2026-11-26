@@ -1,19 +1,12 @@
-import Ajv2020 from 'ajv/dist/2020.js';
-import add2eSchema from '../../schemas/portable/v1/add2e-monster.schema.json';
-import commonSchema from '../../schemas/portable/v1/common.schema.json';
-import librarySchema from '../../schemas/portable/v1/library.schema.json';
-import manifestSchema from '../../schemas/portable/v1/manifest.schema.json';
-import shadowlordsSchema from '../../schemas/portable/v1/shadowlords3e-monster.schema.json';
+import { validateAdd2ePortable, validateManifestPortable, validateLibraryPortable, validateShadowlordsPortable } from '../generated/ajv-portable-validators';
 import type { PortableMonsterEnvelope, PortableManifest, PortableLibrary } from './types';
 
 export interface PortableValidation { valid: boolean; issues: string[] }
 
-const ajv = new Ajv2020({ allErrors: true, strict: true, formats: { 'date-time': true } });
-ajv.addSchema(commonSchema);
-const validateAdd2e = ajv.compile(add2eSchema);
-const validateShadowlords = ajv.compile(shadowlordsSchema);
-const validateLibrary = ajv.compile(librarySchema);
-const validateManifest = ajv.compile(manifestSchema);
+const validateAdd2e = validateAdd2ePortable;
+const validateShadowlords = validateShadowlordsPortable;
+const validateLibrary = validateLibraryPortable;
+const validateManifest = validateManifestPortable;
 
 function issuesOf(errors: typeof validateAdd2e.errors): string[] {
   return (errors ?? []).map((error) => `${error.instancePath || '/'}: ${error.message ?? 'valor inválido.'}`);

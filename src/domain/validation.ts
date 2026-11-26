@@ -1,15 +1,9 @@
-import Ajv2020 from 'ajv/dist/2020.js';
-import add2eSchema from '../../schemas/add2e/v1/monster.schema.json';
-import shadowlordsSchema from '../../schemas/shadowlords3e/v1/monster.schema.json';
+import { validateAdd2eSchema, validateShadowlordsSchema } from '../generated/ajv-domain-validators';
 
 export interface ContractValidation {
   valid: boolean;
   issues: string[];
 }
-
-const ajv = new Ajv2020({ allErrors: true, strict: true });
-const validateAdd2eSchema = ajv.compile(add2eSchema);
-const validateShadowlordsSchema = ajv.compile(shadowlordsSchema);
 
 function validateWithSchema(
   validator: typeof validateAdd2eSchema,
