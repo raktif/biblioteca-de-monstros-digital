@@ -1,32 +1,32 @@
-﻿{
-    "format":  "biblioteca-de-monstros-digital.package",
-    "formatVersion":  1,
-    "kind":  "package-manifest",
-    "packageKind":  "monster",
-    "systemCode":  "shadowlords3e",
-    "schemaKey":  "shadowlords3e.monster",
-    "schemaVersion":  1,
-    "exportedAt":  "2026-11-25T12:00:00Z",
-    "generator":  {
-                      "name":  "Biblioteca de Monstros Digital",
-                      "version":  "0.1.0"
-                  },
-    "counts":  {
-                   "libraries":  0,
-                   "monsters":  1,
-                   "activeMonsters":  1,
-                   "archivedMonsters":  0,
-                   "images":  0,
-                   "files":  1
-               },
-    "totalUncompressedBytes":  2063,
-    "files":  [
-                  {
-                      "path":  "monster.json",
-                      "role":  "monster-data",
-                      "mediaType":  "application/json",
-                      "size":  2063,
-                      "sha256":  "f655352f7822fac688dc9f7ffd0ec3c152a4b434055d04d3f83efb2d26b39fe5"
-                  }
-              ]
+{
+  "format": "biblioteca-de-monstros-digital.package",
+  "formatVersion": 1,
+  "kind": "package-manifest",
+  "packageKind": "monster",
+  "systemCode": "shadowlords3e",
+  "schemaKey": "shadowlords3e.monster",
+  "schemaVersion": 1,
+  "exportedAt": "2026-11-25T12:00:00Z",
+  "generator": {
+    "name": "Biblioteca de Monstros Digital",
+    "version": "0.1.0"
+  },
+  "counts": {
+    "libraries": 0,
+    "monsters": 1,
+    "activeMonsters": 1,
+    "archivedMonsters": 0,
+    "images": 0,
+    "files": 1
+  },
+  "totalUncompressedBytes": 2092,
+  "files": [
+    {
+      "path": "monster.json",
+      "role": "monster-data",
+      "mediaType": "application/json",
+      "size": 2092,
+      "sha256": "9c5d860f479196ee69a3a9c3284185a44bf7b6032af9c535073f1a641f5111c5"
+    }
+  ]
 }

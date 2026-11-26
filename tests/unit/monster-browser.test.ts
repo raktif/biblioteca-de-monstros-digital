@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { filterMonsterRows, normalizeMonsterSearch } from '../../src/app/MonsterBrowser';
+import { filterMonsterRows, monsterFilterOptions, normalizeMonsterSearch } from '../../src/app/MonsterBrowser';
+import { add2eActivityOptions, add2eTerrainOptions } from '../../src/domain/add2e-vocabularies';
+import { activityOptions, terrainOptions } from '../../src/domain/shadowlords-vocabularies';
 import type { MonsterSummary } from '../../src/infrastructure/monsters';
 
 describe('normalização da busca da listagem', () => {
+  it('oferece nos picklists todos os valores dos campos do sistema, mesmo sem monstros que os usem', () => {
+    expect(monsterFilterOptions('add2e', 'terrain').map(([code]) => code)).toEqual(add2eTerrainOptions.map(([code]) => code));
+    expect(monsterFilterOptions('add2e', 'activity').map(([code]) => code)).toEqual(add2eActivityOptions.map(([code]) => code));
+    expect(monsterFilterOptions('shadowlords3e', 'terrain').map(([code]) => code)).toEqual(terrainOptions.map(([code]) => code));
+    expect(monsterFilterOptions('shadowlords3e', 'activity').map(([code]) => code)).toEqual(activityOptions.map(([code]) => code));
+  });
+
   it('ignora acentos, caixa e espaços repetidos', () => {
     expect(normalizeMonsterSearch('  DRAGÃO   AZUL ')).toBe('dragao azul');
     expect(normalizeMonsterSearch('Dragao Azul')).toBe('dragao azul');

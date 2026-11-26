@@ -2,6 +2,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import type { Add2EMonster } from '../generated/add2e-monster';
 import type { ShadowlordsMonster } from '../generated/shadowlords3e-monster';
 import { validateMonster } from '../domain/validation';
+import { updateBrowserLibraryMonsterCounts } from './libraries';
 
 export type MonsterDocument = Add2EMonster | ShadowlordsMonster;
 
@@ -36,6 +37,11 @@ function readBrowserMonsters(): StoredMonster[] {
 function writeBrowserMonsters(monsters: StoredMonster[]): void {
   memoryMonsters = monsters;
   try { globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(monsters)); } catch { /* in-memory fallback */ }
+}
+
+function syncBrowserLibraryCounts(libraryId: string, monsters = readBrowserMonsters()): void {
+  const related = monsters.filter((item) => item.document.libraryId === libraryId);
+  updateBrowserLibraryMonsterCounts(libraryId, related.filter((item) => item.document.status === 'active').length, related.length);
 }
 
 function canonical(value: unknown): string {
@@ -104,7 +110,9 @@ export async function createMonster(libraryId: string, document: MonsterInput, i
   if (library.systemCode !== document.systemCode) throw { code: 'MONSTER_SYSTEM_MISMATCH', message: 'O sistema da ficha precisa corresponder ao sistema da biblioteca.' };
   const now = new Date().toISOString();
   const saved = withHash({ ...document, id: crypto.randomUUID(), libraryId, schemaKey: `${document.systemCode}.monster`, schemaVersion: 1, status: 'active', image: null, createdAt: now, updatedAt: now, rowVersion: 1 } as MonsterDocument);
-  writeBrowserMonsters([...readBrowserMonsters(), { document: saved, imageDataUrl, previousStatus: null }]);
+  const updated = [...readBrowserMonsters(), { document: saved, imageDataUrl, previousStatus: null }];
+  writeBrowserMonsters(updated);
+  syncBrowserLibraryCounts(libraryId, updated);
   return { document: structuredClone(saved), imageDataUrl };
 }
 
@@ -131,7 +139,9 @@ export async function setMonsterArchived(id: string, archived: boolean, expected
   if (!current) throw { code: 'MONSTER_NOT_FOUND', message: 'Monstro não encontrado.' };
   if ((current.document.rowVersion ?? 1) !== expectedRowVersion) throw { code: 'CONFLICT_ROW_VERSION', message: 'A ficha foi alterada. Recarregue e tente novamente.' };
   const document = withHash({ ...current.document, status: archived ? 'archived' : 'active', updatedAt: new Date().toISOString(), rowVersion: expectedRowVersion + 1 });
-  writeBrowserMonsters(items.map((item) => item.document.id === id ? { ...item, document } : item));
+  const updated = items.map((item) => item.document.id === id ? { ...item, document } : item);
+  writeBrowserMonsters(updated);
+  syncBrowserLibraryCounts(current.document.libraryId, updated);
   return { document, imageDataUrl: current.imageDataUrl };
 }
 
@@ -143,7 +153,9 @@ export async function moveMonsterToTrash(id: string, expectedRowVersion: number)
   if ((current.document.rowVersion ?? 1) !== expectedRowVersion) throw { code: 'CONFLICT_ROW_VERSION', message: 'A ficha foi alterada. Recarregue e tente novamente.' };
   const now = new Date().toISOString();
   const document = withHash({ ...current.document, status: 'trashed', updatedAt: now, rowVersion: expectedRowVersion + 1 });
-  writeBrowserMonsters(items.map((item) => item.document.id === id ? { ...item, document, previousStatus: current.document.status === 'trashed' ? 'active' : current.document.status } : item));
+  const updated = items.map((item) => item.document.id === id ? { ...item, document, previousStatus: current.document.status === 'trashed' ? 'active' : current.document.status } : item);
+  writeBrowserMonsters(updated);
+  syncBrowserLibraryCounts(current.document.libraryId, updated);
 }
 
 export async function restoreMonster(id: string): Promise<void> {
@@ -152,7 +164,9 @@ export async function restoreMonster(id: string): Promise<void> {
   const current = items.find((item) => item.document.id === id && item.document.status === 'trashed');
   if (!current) throw { code: 'MONSTER_NOT_FOUND', message: 'Monstro não encontrado na lixeira.' };
   const document = withHash({ ...current.document, status: current.previousStatus ?? 'active', updatedAt: new Date().toISOString(), rowVersion: (current.document.rowVersion ?? 1) + 1 });
-  writeBrowserMonsters(items.map((item) => item.document.id === id ? { ...item, document, previousStatus: null } : item));
+  const updated = items.map((item) => item.document.id === id ? { ...item, document, previousStatus: null } : item);
+  writeBrowserMonsters(updated);
+  syncBrowserLibraryCounts(current.document.libraryId, updated);
 }
 
 export async function deleteMonsterPermanently(id: string, confirmationName: string): Promise<void> {
@@ -161,5 +175,7 @@ export async function deleteMonsterPermanently(id: string, confirmationName: str
   const target = items.find((item) => item.document.id === id && item.document.status === 'trashed');
   if (!target) throw { code: 'MONSTER_NOT_FOUND', message: 'Mova o monstro para a lixeira primeiro.' };
   if (target.document.name !== confirmationName) throw { code: 'CONFIRMATION_NAME_MISMATCH', message: 'Digite o nome exato do monstro para confirmar.' };
-  writeBrowserMonsters(items.filter((item) => item.document.id !== id));
+  const updated = items.filter((item) => item.document.id !== id);
+  writeBrowserMonsters(updated);
+  syncBrowserLibraryCounts(target.document.libraryId, updated);
 }

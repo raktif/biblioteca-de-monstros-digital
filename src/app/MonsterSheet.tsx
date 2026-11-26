@@ -9,6 +9,7 @@ type Props = {
   onEdit: () => void;
   onArchive: (archived: boolean) => void;
   onTrash: () => void;
+  onExport: () => void;
 };
 
 type SheetField = [string, string | null | undefined];
@@ -62,7 +63,7 @@ function Narrative({ title, value }: { title: string; value: string | null }) {
   return <section className="sheet-narrative"><h3>{title}</h3><LimitedMarkdown source={value} /></section>;
 }
 
-export function MonsterSheet({ record, onClose, onEdit, onArchive, onTrash }: Props) {
+export function MonsterSheet({ record, onClose, onEdit, onArchive, onTrash, onExport }: Props) {
   const document = record.document;
   const [profileId, setProfileId] = useState(document.profiles.find((profile) => profile.isPrimary)?.id ?? document.profiles[0].id);
   const [imageOpen, setImageOpen] = useState(false);
@@ -70,7 +71,7 @@ export function MonsterSheet({ record, onClose, onEdit, onArchive, onTrash }: Pr
   const archived = document.status === 'archived';
 
   return <div className="monster-sheet-overlay"><article className="monster-sheet" role="dialog" aria-modal="true" aria-labelledby="monster-sheet-title">
-    <header className="monster-sheet-header"><button className="back-link" onClick={onClose}>← Voltar à biblioteca</button><div className="sheet-actions"><button className="secondary-button" onClick={onEdit}>Editar</button><button className="secondary-button" onClick={() => onArchive(!archived)}>{archived ? 'Desarquivar' : 'Arquivar'}</button><button className="danger-button" onClick={onTrash}>Remover</button><button className="secondary-button" disabled title="Disponível na Etapa 7">Exportar</button></div></header>
+    <header className="monster-sheet-header"><button className="back-link" onClick={onClose}>← Voltar à biblioteca</button><div className="sheet-actions"><button className="secondary-button" onClick={onEdit}>Editar</button><button className="secondary-button" onClick={() => onArchive(!archived)}>{archived ? 'Desarquivar' : 'Arquivar'}</button><button className="danger-button" onClick={onTrash}>Remover</button><button className="secondary-button" onClick={onExport}>Exportar</button></div></header>
     <div className="monster-sheet-body"><p className="kicker">AD&D 2ª EDIÇÃO <span className={archived ? 'sheet-status archived' : 'sheet-status'}>{archived ? 'ARQUIVADO' : 'ATIVO'}</span></p><h1 id="monster-sheet-title">{document.name}</h1>{document.editorialCategory && <p className="monster-category">{document.editorialCategory}</p>}
       {record.imageDataUrl && <button className="monster-sheet-image" onClick={() => setImageOpen(true)} aria-label="Ampliar imagem do monstro"><img src={record.imageDataUrl} alt={`Imagem de ${document.name}`} /><span>Ampliar imagem</span></button>}
       {document.profiles.length > 1 && <><div className="profile-switcher" role="tablist" aria-label="Selecionar perfil">{document.profiles.map((item) => <button role="tab" aria-selected={item.id === profile.id} className={item.id === profile.id ? 'profile-tab selected' : 'profile-tab'} key={item.id} onClick={() => setProfileId(item.id)}>{item.label}{item.isPrimary ? ' ★' : ''}</button>)}</div><div className="profile-compare-wide"><ProfileComparison profiles={document.profiles} /></div></>}

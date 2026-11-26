@@ -73,6 +73,11 @@ export async function listLibraries(): Promise<Library[]> {
   return isTauri() ? invoke<Library[]>('library_list') : sortLibraries(readBrowserLibraries().filter((item) => !item.deletedAt));
 }
 
+export function updateBrowserLibraryMonsterCounts(id: string, activeMonsterCount: number, totalMonsterCount: number): void {
+  if (isTauri()) return;
+  writeBrowserLibraries(readBrowserLibraries().map((item) => item.id === id ? { ...item, activeMonsterCount, totalMonsterCount } : item));
+}
+
 export async function listTrashedLibraries(): Promise<Library[]> {
   return isTauri() ? invoke<Library[]>('library_trash_list') : readBrowserLibraries().filter((item) => !!item.deletedAt && !!item.purgeAfter && item.purgeAfter > new Date().toISOString());
 }
