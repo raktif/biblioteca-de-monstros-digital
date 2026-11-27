@@ -233,13 +233,13 @@ function App() {
   async function exportSelectedLibrary() {
     if (!selected) return;
     setError('');
-    try { await exportLibrary(selected.id); setNotice(`Arquivo ZIP de “${selected.name}” preparado para download.`); }
+    try { const filename = await exportLibrary(selected.id); if (filename) setNotice(`Pacote da biblioteca salvo como “${filename}”.`); }
     catch (reason) { setError(errorMessage(reason)); }
   }
 
   async function exportMonsterById(id: string, name: string) {
     setError('');
-    try { await exportMonster(id); setNotice(`Arquivo ZIP de “${name}” preparado para download.`); }
+    try { const filename = await exportMonster(id); if (filename) setNotice(`Pacote do monstro “${name}” salvo como “${filename}”.`); }
     catch (reason) { setError(errorMessage(reason)); }
   }
 

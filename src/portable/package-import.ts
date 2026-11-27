@@ -12,7 +12,6 @@ type PackageMonster = { envelope: PortableMonsterEnvelope; sourceName: string; f
 type ImportPlan = { manifest: PortableManifest; library: PortableLibrary | null; monsters: PackageMonster[]; files: Map<string, Uint8Array>; finalLibraryName: string | null };
 
 const plans = new Map<string, ImportPlan>();
-const reports = new Map<string, ImportReport>();
 
 function mediaTypeFor(path: string): string {
   if (path.toLowerCase().endsWith('.json')) return 'application/json';
@@ -205,7 +204,6 @@ export async function executePortableImport(options: { planId: string; targetLib
       importedMonsterIds: createdMonsters.map((record) => record.document.id),
       warnings: [],
     };
-    reports.set(report.operationId, report);
     return report;
   } catch (error) {
     const cleanupErrors: string[] = [];
@@ -299,4 +297,3 @@ export async function executePortableImportBatch(items: Array<{ planId: string; 
   };
 }
 
-export function getPortableImportReport(operationId: string): ImportReport | null { return reports.get(operationId) ?? null; }
