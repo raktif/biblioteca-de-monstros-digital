@@ -107,11 +107,6 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .portable-dropzone strong { font-family: Georgia, serif; font-size: 18px; font-weight: 500; }
 .portable-dropzone small { margin-bottom: 6px; color: #819087; font-size: 12px; }
 .portable-drop-icon { display: grid; width: 42px; height: 42px; place-items: center; margin-bottom: 3px; border-radius: 50%; color: #41674e; background: #e4eee1; font-size: 24px; }
-.portable-inspection { display: grid; gap: 12px; margin-top: 17px; }
-.portable-inspection-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 14px; border: 1px solid #e0e8dc; border-radius: 8px; background: #fff; }
-.portable-inspection-summary > span { color: #8d7949; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.portable-inspection-summary > strong { color: #355744; font-size: 12px; }
-.portable-inspection-summary > small { flex-basis: 100%; color: #76837a; font-size: 12px; }
 .portable-preview-table { max-height: 240px; overflow: auto; border: 1px solid #e3e9e1; border-radius: 8px; background: white; }
 .portable-preview-table table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
 .portable-preview-table caption { padding: 11px 13px; color: #3b5948; font-weight: 700; text-align: left; }

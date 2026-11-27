@@ -91,24 +91,38 @@ export async function buildLibraryPackage(library: Library): Promise<Uint8Array>
   return packageBytes('library', library.systemCode, entries, records, 1);
 }
 
-export function downloadPackage(bytes: Uint8Array, filename: string): void {
-  const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/zip' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+type SaveFilePicker = (options: { suggestedName: string; types: Array<{ description: string; accept: Record<string, string[]> }> }) => Promise<{ name: string; createWritable: () => Promise<{ write: (data: Uint8Array) => Promise<void>; close: () => Promise<void> }> }>;
+
+export async function downloadPackage(bytes: Uint8Array, filename: string): Promise<string | null> {
+  const picker = (window as Window & { showSaveFilePicker?: SaveFilePicker }).showSaveFilePicker;
+  if (!picker) throw new Error('A janela para salvar arquivos não está disponível neste ambiente.');
+  let handle: Awaited<ReturnType<SaveFilePicker>>;
+  try {
+    handle = await picker.call(window, { suggestedName: filename, types: [{ description: 'Pacote ZIP', accept: { 'application/zip': ['.zip'] } }] });
+  } catch (reason) {
+    if ((reason as { name?: string })?.name === 'AbortError') return null;
+    throw reason;
+  }
+  const file = await handle.createWritable();
+  try {
+    await file.write(bytes);
+    await file.close();
+  } catch (reason) {
+    try { await file.close(); } catch { /* preserve the original write error */ }
+    throw reason;
+  }
+  return handle.name;
 }
 
-export async function exportLibrary(libraryId: string): Promise<void> {
+export async function exportLibrary(libraryId: string): Promise<string | null> {
   const library = (await listLibraries()).find((item) => item.id === libraryId);
   if (!library) throw new Error('A biblioteca selecionada não está disponível para exportação.');
   const bytes = await buildLibraryPackage(library);
-  downloadPackage(bytes, `${slug(library.name)}.library.zip`);
+  return downloadPackage(bytes, `${slug(library.name)}.library.zip`);
 }
 
-export async function exportMonster(monsterId: string): Promise<void> {
+export async function exportMonster(monsterId: string): Promise<string | null> {
   const record = await getMonster(monsterId);
   const bytes = await buildMonsterPackage(monsterId);
-  downloadPackage(bytes, `${slug(record.document.name)}.monster.zip`);
+  return downloadPackage(bytes, `${slug(record.document.name)}.monster.zip`);
 }
