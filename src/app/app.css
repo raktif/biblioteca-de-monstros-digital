@@ -286,6 +286,19 @@ body:has(.monster-sheet-overlay) { overflow: hidden; }
 .sheet-table-notes { color: #79867e; font-size: 12px; }
 .sheet-sources { display: grid; gap: 10px; padding-left: 20px; color: #53645a; font-size: 13px; }
 .sheet-sources p { margin: 4px 0 0; color: #7e8981; }
+.treasure-references { display:inline-flex; flex-wrap:wrap; align-items:center; gap:.3rem; }
+.treasure-reference-wrap { position:relative; display:inline-flex; }
+.treasure-reference { padding:.12rem .48rem; border:1px solid #bdcdbd; border-radius:1rem; color:#234d36; background:#eef5ed; font:inherit; font-weight:700; cursor:pointer; }
+.treasure-reference:focus-visible { outline:3px solid #4a86bf; outline-offset:2px; }
+.treasure-popover { position:absolute; z-index:40; top:100%; left:0; display:none; width:min(680px, calc(100vw - 44px)); max-height:min(65vh, 440px); overflow:auto; padding:.85rem; border:1px solid #9eaf9e; border-radius:9px; background:#fff; box-shadow:0 12px 32px #15271d38; color:#263b2e; }
+.treasure-popover.is-open { display:block; }
+.treasure-popover-content > strong { display:block; margin-bottom:.6rem; color:#294e38; }
+.treasure-popover table { width:100%; border-collapse:collapse; font-size:11px; }
+.treasure-popover caption { padding:.25rem; text-align:left; color:#758279; }
+.treasure-popover th,.treasure-popover td { padding:.45rem; border:1px solid #e1e8df; text-align:left; vertical-align:top; }
+.treasure-popover th { background:#f0f5ee; }
+.treasure-popover td small { display:block; margin-top:.25rem; color:#637268; white-space:nowrap; }
+.monster-field small[id$="treasure-help"], .monster-field small[id*="treasure-help-"] { color:#718075; font-size:11px; font-weight:400; line-height:1.4; }
 .sheet-metadata { margin-top: 32px; padding-top: 14px; border-top: 1px solid #e2e8e0; color: #8b958e; font-size: 11px; }
 .image-viewer-backdrop { position: fixed; z-index: 30; inset: 0; overflow: auto; padding: 40px 24px; background: #101914ed; }
 .image-viewer { position: relative; display: grid; width: min(100%, 1300px); min-height: calc(100vh - 80px); margin: 0 auto; place-items: center; }

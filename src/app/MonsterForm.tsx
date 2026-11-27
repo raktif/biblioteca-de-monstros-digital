@@ -204,7 +204,7 @@ export function MonsterForm({ libraryId, initial, initialImage, saving, serverEr
       <ChoiceGroup label="Período de atividade" choices={activityOptions} entries={selectedProfile.activityPeriods} onToggle={(code) => toggleChoice<Profile['activityPeriods'][number]>('activityPeriods', code)} onOther={(code,text) => setChoiceOther('activityPeriods', code,text)} otherRequiredCodes={['special','other']} />
               {textInput('Complemento de atividade', selectedProfile.activityNotes ?? '', (value) => updateProfileField('activityNotes', value || null), 120)}
               {textInput('Dieta', selectedProfile.diet, (value) => updateProfileField('diet', value), 120)}
-              {textInput('Tesouro', selectedProfile.treasure, (value) => updateProfileField('treasure', value), 120)}
+              <label className="monster-field">Tesouro<input aria-describedby="add2e-treasure-help" maxLength={120} value={selectedProfile.treasure} onChange={(event) => updateProfileField('treasure', event.target.value)} /><small id="add2e-treasure-help">Use letras A–Z; separe referências por vírgula. Exemplo: H, I ou V ×4. A consulta aparece na ficha do monstro.</small></label>
               {textInput('Quantidade/Encontro', selectedProfile.quantityEncounter, (value) => updateProfileField('quantityEncounter', value), 120)}
               {textInput('Tamanho', selectedProfile.size, (value) => updateProfileField('size', value), 120)}
               {textInput('Moral', selectedProfile.morale, (value) => updateProfileField('morale', value), 120)}
