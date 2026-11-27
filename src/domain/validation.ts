@@ -1,4 +1,5 @@
 import { validateAdd2eSchema, validateShadowlordsSchema } from '../generated/ajv-domain-validators';
+import { activityOptions, climateOptions, dietOptions, frequencyOptions, organizationOptions, sizeOptions, terrainOptions, traitCategoryOptions } from './shadowlords-vocabularies';
 
 export interface ContractValidation {
   valid: boolean;
@@ -12,6 +13,24 @@ function validateWithSchema(
   const valid = validator(value);
   const issues = (validator.errors ?? []).map((error) => {
     const path = error.instancePath || '/';
+    if (error.keyword === 'enum') {
+      const segments = path.split('/').filter(Boolean);
+      const field = segments.at(-1) ?? 'campo';
+      const received = segments.reduce<unknown>((current, segment) => {
+        if (Array.isArray(current)) return current[Number(segment)];
+        if (typeof current === 'object' && current !== null) return (current as Record<string, unknown>)[segment];
+        return undefined;
+      }, value);
+      const fieldLabels: Record<string, string> = { organization: 'organização', category: 'categoria da característica', kind: 'tipo do perfil', code: 'código', status: 'estado', ageCategory: 'faixa etária', damageType: 'tipo de dano', mode: 'modo', shape: 'formato', attribute: 'atributo' };
+      const vocabulary = error.params.allowedValues as unknown[] | undefined;
+      const knownOptions = [activityOptions, climateOptions, dietOptions, frequencyOptions, organizationOptions, sizeOptions, terrainOptions, traitCategoryOptions]
+        .flatMap((options) => options as readonly (readonly [unknown, string])[])
+        .filter(([code]) => vocabulary?.includes(code));
+      const allowed = knownOptions.length === vocabulary?.length
+        ? knownOptions.map(([code, label]) => `${label} (${String(code)})`).join(', ')
+        : vocabulary?.map(String).join(', ') ?? '';
+      return `${path}: ${fieldLabels[field] ?? field} contém o valor “${String(received)}”, que não é aceito${allowed ? `. Opções válidas: ${allowed}.` : '.'}`;
+    }
     const messages: Record<string, string> = {
       additionalProperties: 'propriedade não reconhecida.',
       const: 'valor incompatível com o contrato.',
