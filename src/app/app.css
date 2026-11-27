@@ -120,6 +120,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .small-dialog .dialog-actions { margin-top: 24px; }
 .busy-indicator { position: fixed; right: 20px; bottom: 20px; padding: 10px 14px; border: 1px solid #d9e2d8; border-radius: 8px; color: #345343; background: #fff; box-shadow: 0 6px 20px #1d332215; font-size: 12px; }
 .alert, .notice { position: fixed; z-index: 8; top: 80px; right: 24px; display: flex; max-width: min(480px, calc(100vw - 48px)); align-items: center; gap: 18px; padding: 12px 15px; border: 1px solid #efcfca; border-radius: 7px; color: #883c34; background: #fff6f4; box-shadow: 0 6px 22px #20362918; font-size: 13px; }
+.alert { white-space: pre-line; }
 .notice { border-color: #d7e4d6; color: #345d43; background: #f4faf3; }
 .alert button, .notice button { border: 0; color: inherit; background: transparent; font-size: 18px; cursor: pointer; }
 @media (max-width: 760px) {

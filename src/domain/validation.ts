@@ -6,6 +6,23 @@ export interface ContractValidation {
   issues: string[];
 }
 
+function similarity(left: string, right: string): number {
+  const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
+  const a = normalize(left);
+  const b = normalize(right);
+  const row = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    let diagonal = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const above = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diagonal = above;
+    }
+  }
+  return 1 - row[b.length] / Math.max(a.length, b.length, 1);
+}
+
 function validateWithSchema(
   validator: typeof validateAdd2eSchema,
   value: unknown,
@@ -26,10 +43,17 @@ function validateWithSchema(
       const knownOptions = [activityOptions, climateOptions, dietOptions, frequencyOptions, organizationOptions, sizeOptions, terrainOptions, traitCategoryOptions]
         .flatMap((options) => options as readonly (readonly [unknown, string])[])
         .filter(([code]) => vocabulary?.includes(code));
-      const allowed = knownOptions.length === vocabulary?.length
-        ? knownOptions.map(([code, label]) => `${label} (${String(code)})`).join(', ')
-        : vocabulary?.map(String).join(', ') ?? '';
-      return `${path}: ${fieldLabels[field] ?? field} contém o valor “${String(received)}”, que não é aceito${allowed ? `. Opções válidas: ${allowed}.` : '.'}`;
+      const options = knownOptions.length === vocabulary?.length
+        ? knownOptions.map(([code, label]) => ({ code: String(code), label }))
+        : (vocabulary ?? []).map((code) => ({ code: String(code), label: String(code) }));
+      const allowed = options.map(({ code, label }) => `${label} (código: ${code})`).join('; ');
+      const suggestions = options
+        .map((option) => ({ ...option, score: Math.max(similarity(String(received), option.code), similarity(String(received), option.label)) }))
+        .filter((option) => option.score >= 0.7)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+      const suggestion = suggestions.length ? ` Sugestão${suggestions.length > 1 ? 'ões' : ''} (similaridade ≥ 70%): ${suggestions.map(({ code, label }) => `${label} — use o código “${code}”`).join('; ')}.` : '';
+      return `${path}: ${fieldLabels[field] ?? field} recebeu “${String(received)}”, que não é válido.${suggestion}${allowed ? ` Valores aceitos (use o código): ${allowed}.` : ''}`;
     }
     const messages: Record<string, string> = {
       additionalProperties: 'propriedade não reconhecida.',
