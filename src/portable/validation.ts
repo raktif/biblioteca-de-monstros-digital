@@ -1,4 +1,5 @@
 import { validateAdd2ePortable, validateManifestPortable, validateLibraryPortable, validateShadowlordsPortable } from '../generated/ajv-portable-validators';
+import { formatValidationErrors } from '../domain/validation-messages';
 import type { PortableMonsterEnvelope, PortableManifest, PortableLibrary } from './types';
 
 export interface PortableValidation { valid: boolean; issues: string[] }
@@ -8,8 +9,8 @@ const validateShadowlords = validateShadowlordsPortable;
 const validateLibrary = validateLibraryPortable;
 const validateManifest = validateManifestPortable;
 
-function issuesOf(errors: typeof validateAdd2e.errors): string[] {
-  return (errors ?? []).map((error) => `${error.instancePath || '/'}: ${error.message ?? 'valor inválido.'}`);
+function issuesOf(errors: typeof validateAdd2e.errors, value: unknown): string[] {
+  return formatValidationErrors(errors, value);
 }
 
 function semanticMonster(value: unknown): string[] {
@@ -35,18 +36,18 @@ function semanticMonster(value: unknown): string[] {
 export function validatePortableMonster(value: unknown): PortableValidation {
   const validator = (value as { systemCode?: string })?.systemCode === 'add2e' ? validateAdd2e : validateShadowlords;
   const valid = validator(value);
-  const issues = [...issuesOf(validator.errors), ...semanticMonster(value)];
+  const issues = [...issuesOf(validator.errors, value), ...semanticMonster(value)];
   return { valid: valid && issues.length === 0, issues };
 }
 
 export function validatePortableLibrary(value: unknown): PortableValidation {
   const valid = validateLibrary(value);
-  return { valid: valid && !validateLibrary.errors?.length, issues: issuesOf(validateLibrary.errors) };
+  return { valid: valid && !validateLibrary.errors?.length, issues: issuesOf(validateLibrary.errors, value) };
 }
 
 export function validatePortableManifest(value: unknown): PortableValidation {
   const valid = validateManifest(value);
-  return { valid: valid && !validateManifest.errors?.length, issues: issuesOf(validateManifest.errors) };
+  return { valid: valid && !validateManifest.errors?.length, issues: issuesOf(validateManifest.errors, value) };
 }
 
 export function assertPortableMonster(value: unknown): asserts value is PortableMonsterEnvelope {

@@ -1,26 +1,9 @@
 import { validateAdd2eSchema, validateShadowlordsSchema } from '../generated/ajv-domain-validators';
-import { activityOptions, climateOptions, dietOptions, frequencyOptions, organizationOptions, sizeOptions, terrainOptions, traitCategoryOptions } from './shadowlords-vocabularies';
+import { formatValidationErrors } from './validation-messages';
 
 export interface ContractValidation {
   valid: boolean;
   issues: string[];
-}
-
-function similarity(left: string, right: string): number {
-  const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
-  const a = normalize(left);
-  const b = normalize(right);
-  const row = Array.from({ length: b.length + 1 }, (_, index) => index);
-  for (let i = 1; i <= a.length; i += 1) {
-    let diagonal = row[0];
-    row[0] = i;
-    for (let j = 1; j <= b.length; j += 1) {
-      const above = row[j];
-      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
-      diagonal = above;
-    }
-  }
-  return 1 - row[b.length] / Math.max(a.length, b.length, 1);
 }
 
 function validateWithSchema(
@@ -28,50 +11,7 @@ function validateWithSchema(
   value: unknown,
 ): ContractValidation {
   const valid = validator(value);
-  const issues = (validator.errors ?? []).map((error) => {
-    const path = error.instancePath || '/';
-    if (error.keyword === 'enum') {
-      const segments = path.split('/').filter(Boolean);
-      const field = segments.at(-1) ?? 'campo';
-      const received = segments.reduce<unknown>((current, segment) => {
-        if (Array.isArray(current)) return current[Number(segment)];
-        if (typeof current === 'object' && current !== null) return (current as Record<string, unknown>)[segment];
-        return undefined;
-      }, value);
-      const fieldLabels: Record<string, string> = { organization: 'organização', category: 'categoria da característica', kind: 'tipo do perfil', code: 'código', status: 'estado', ageCategory: 'faixa etária', damageType: 'tipo de dano', mode: 'modo', shape: 'formato', attribute: 'atributo' };
-      const vocabulary = error.params.allowedValues as unknown[] | undefined;
-      const knownOptions = [activityOptions, climateOptions, dietOptions, frequencyOptions, organizationOptions, sizeOptions, terrainOptions, traitCategoryOptions]
-        .flatMap((options) => options as readonly (readonly [unknown, string])[])
-        .filter(([code]) => vocabulary?.includes(code));
-      const options = knownOptions.length === vocabulary?.length
-        ? knownOptions.map(([code, label]) => ({ code: String(code), label }))
-        : (vocabulary ?? []).map((code) => ({ code: String(code), label: String(code) }));
-      const allowed = options.map(({ code, label }) => `${label} (código: ${code})`).join('; ');
-      const suggestions = options
-        .map((option) => ({ ...option, score: Math.max(similarity(String(received), option.code), similarity(String(received), option.label)) }))
-        .filter((option) => option.score >= 0.7)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
-      const suggestion = suggestions.length ? ` Sugestão${suggestions.length > 1 ? 'ões' : ''} (similaridade ≥ 70%): ${suggestions.map(({ code, label }) => `${label} — use o código “${code}”`).join('; ')}.` : '';
-      return `${path}: ${fieldLabels[field] ?? field} recebeu “${String(received)}”, que não é válido.${suggestion}${allowed ? ` Valores aceitos (use o código): ${allowed}.` : ''}`;
-    }
-    const messages: Record<string, string> = {
-      additionalProperties: 'propriedade não reconhecida.',
-      const: 'valor incompatível com o contrato.',
-      enum: 'valor fora do vocabulário permitido.',
-      maxItems: 'quantidade de itens acima do limite.',
-      maxLength: 'texto acima do limite de caracteres.',
-      maximum: 'valor acima do limite permitido.',
-      minItems: 'quantidade de itens abaixo do mínimo.',
-      minLength: 'texto abaixo do mínimo de caracteres.',
-      minimum: 'valor abaixo do limite permitido.',
-      pattern: 'formato inválido.',
-      required: 'campo obrigatório ausente.',
-      type: 'tipo de valor inválido.',
-      uniqueItems: 'a lista contém itens repetidos.',
-    };
-    return `${path}: ${messages[error.keyword] ?? 'valor inválido.'}`;
-  });
+  const issues = formatValidationErrors(validator.errors, value);
 
   return { valid, issues };
 }
